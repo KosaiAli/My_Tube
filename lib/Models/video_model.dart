@@ -1,24 +1,17 @@
-// ignore_for_file: non_constant_identifier_names
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:dio/dio.dart';
-import 'package:http/http.dart' as http;
-
 class VideoModel {
   final String title;
   final String thumb;
-  final String? filesize_video;
+
   String? video;
   final String? id;
   final String? channelTitle;
   final String? playlistId;
-  final bool existedOnStorage;
-
+  bool existedOnStorage;
+  bool downloading = false;
+  double? downloaded;
   VideoModel(
       {required this.title,
       required this.thumb,
-      this.filesize_video,
       this.video,
       this.id,
       this.channelTitle,
@@ -29,9 +22,8 @@ class VideoModel {
     return VideoModel(
       title: object['title'] ?? object['Name'],
       thumb: object['thumbnail'] ?? object['Image'],
-      filesize_video: object['filesize_video'],
       // video: object['mp4']['download'] ?? '',
-      id: object['id'],
+      id: object['Id'],
       channelTitle: object['channelTitle'],
       existedOnStorage: exists,
     );

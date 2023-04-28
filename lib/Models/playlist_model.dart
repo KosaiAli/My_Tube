@@ -6,6 +6,10 @@ class PlayList {
   PlayList(this.id, this.name, this.image);
 
   Map<String, String> toJson() {
-    return {'Id': id, 'Name': name, 'Image': image};
+    return {
+      'Id': id,
+      'Name': name,
+      'Image': image,
+    };
   }
 }

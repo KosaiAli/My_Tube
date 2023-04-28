@@ -1,20 +1,15 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:my_youtube/data_center.dart';
-import 'package:my_youtube/database.dart';
-import 'package:my_youtube/download_screen.dart';
-import 'package:my_youtube/result.dart';
-import 'package:my_youtube/utility.dart';
-import 'package:my_youtube/video_player_screen.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:provider/provider.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
-import 'package:http/http.dart' as http;
 
-import 'Models/client.dart';
+import './Models/data_center.dart';
+import './Models/database.dart';
+import './Screens/download_screen.dart';
+import './Models/video_model.dart';
+import './Screens/video_player_screen.dart';
 
 void main() {
   runApp(MaterialApp(
@@ -207,8 +202,8 @@ class _MainScreenState extends State<MainScreen> {
                                           value: dataCenter.videosToDownload
                                               .contains(video.id),
                                           onChanged: (_) {
-                                            dataCenter.ShuffleDownloadList(
-                                                video.id);
+                                            dataCenter
+                                                .shuffleDownloadList(video.id);
                                           },
                                         ),
                                       )
@@ -229,9 +224,11 @@ class _MainScreenState extends State<MainScreen> {
                             var list = ["WgVQjr5PuXA", "14CkH6s4F7A"];
                             await VideoDataBase.instance
                                 .createPLaylist(dataCenter);
+                            dataCenter.downloadList();
+                            panelController.close();
                             // print(await DownloadnClient.getListDownloadLisnks(
                             //     list));
-                            dataCenter.initDownloadVideos();
+                            // dataCenter.initDownloadVideos();
                           },
                           child: Container(
                             color: Colors.blue,

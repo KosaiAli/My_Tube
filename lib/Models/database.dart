@@ -1,12 +1,7 @@
-import 'dart:convert';
-
-import 'package:flutter/cupertino.dart';
-import 'package:my_youtube/data_center.dart';
 import 'package:path/path.dart';
-import 'package:provider/provider.dart';
 import 'package:sqflite/sqflite.dart';
 
-import './Models/playlist_model.dart';
+import './data_center.dart';
 
 class VideoDataBase {
   static final VideoDataBase instance = VideoDataBase._init();
@@ -51,8 +46,7 @@ CREATE TABLE Video (
 
   Future createPLaylist(DataCenter dataInstance) async {
     final db = await instance.database;
-    // await db.delete('Video');
-    // await db.delete('PlayLists');
+
     Map<String, String> playlistData = dataInstance.playList.toJson();
 
     final playList = await db.rawQuery(
@@ -70,7 +64,7 @@ CREATE TABLE Video (
       return downloadedVideos
           .any((downloadedVideo) => downloadedVideo['Id'] == videoId);
     });
-    print(dataInstance.videosToDownload);
+
     for (var id in videos) {
       final video =
           dataInstance.playListData.firstWhere((element) => element.id == id);
@@ -78,18 +72,26 @@ CREATE TABLE Video (
       Map<String, String> videoData = video.tojson();
 
       await db.insert('Video', videoData);
+      dataInstance.addVideo(video);
     }
-
-    final maps = await db.rawQuery(
-        'SELECT * FROM Video WHERE PlaylistId LIKE "%${playlistData['Id']}%" ');
-    // maps.forEach((element) {
-    //   print(element);
-    // });
-    print(maps);
   }
 
   Future<List<Map<String, Object?>>> fetchVideos() async {
     final db = await instance.database;
+
     return await db.rawQuery('SELECT * FROM Video');
+  }
+
+  Future<List<Map<String, Object?>>> fetchPlaylists() async {
+    final db = await instance.database;
+
+    return await db.rawQuery('SELECT * FROM PlayLists');
+  }
+
+  Future<List<Map<String, Object?>>> fetchPlaylistVideos(playListID) async {
+    final db = await instance.database;
+
+    return await db
+        .rawQuery('SELECT * FROM Video WHERE PlaylistId LIKE "%$playListID%" ');
   }
 }

@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'dart:io';
 
-import 'package:file_manager/file_manager.dart';
 import 'package:flutter/material.dart';
-import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:video_player/video_player.dart';
+
+import '../Models/database.dart';
 
 class VideoPLayerScreen extends StatefulWidget {
   const VideoPLayerScreen({super.key});
@@ -16,7 +15,7 @@ class VideoPLayerScreen extends StatefulWidget {
 class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
   late VideoPlayerController videoPlayerController;
   bool filePicked = false;
-  final List<String> videos = [];
+  List videos = [];
   @override
   void initState() {
     printAllvideos('/storage/emulated/0/');
@@ -24,18 +23,20 @@ class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
   }
 
   Future<void> printAllvideos(String path) async {
-    var dirs = Directory(path).listSync();
+    // var dirs = Directory(path).listSync();
 
-    for (var element in dirs) {
-      if (FileManager.isFile(element)) {
-        if (FileManager.getFileExtension(element) == 'mp4') {
-          videos.add(element.path);
-          print(element.path);
-        }
-        continue;
-      }
-      printAllvideos(element.path);
-    }
+    // for (var element in dirs) {
+    //   if (FileManager.isFile(element)) {
+    //     if (FileManager.getFileExtension(element) == 'mp4') {
+    //       videos.add(element.path);
+    //       print(element.path);
+    //     }
+    //     continue;
+    //   }
+    //   printAllvideos(element.path);
+    // }
+    videos = await VideoDataBase.instance.fetchPlaylists();
+    setState(() {});
   }
 
   @override
@@ -44,14 +45,9 @@ class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
       body: ListView.builder(
         itemCount: videos.length,
         itemBuilder: (context, index) {
-          File file = File(videos[index]);
-
-          var laste = file.path.lastIndexOf(Platform.pathSeparator);
-
-          var name = file.path.substring(laste + 1);
-          return Container(
+          return SizedBox(
             height: 200,
-            child: Text(name),
+            child: Text(videos[index]['Name']),
           );
         },
       ),
