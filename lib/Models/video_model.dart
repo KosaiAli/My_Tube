@@ -1,18 +1,20 @@
+enum Downloadstatus { downloading, inQueue, stopped, error }
+
 class VideoModel {
   final String title;
   final String thumb;
 
-  String? video;
+  String? videoUrl;
   final String? id;
   final String? channelTitle;
   final String? playlistId;
   bool existedOnStorage;
-  bool downloading = false;
+  Downloadstatus videoStatus = Downloadstatus.stopped;
   double? downloaded;
   VideoModel(
       {required this.title,
       required this.thumb,
-      this.video,
+      this.videoUrl,
       this.id,
       this.channelTitle,
       this.playlistId,

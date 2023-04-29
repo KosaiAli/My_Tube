@@ -1,7 +1,7 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import './data_center.dart';
+import 'data_center.dart';
 
 class VideoDataBase {
   static final VideoDataBase instance = VideoDataBase._init();
@@ -46,7 +46,8 @@ CREATE TABLE Video (
 
   Future createPLaylist(DataCenter dataInstance) async {
     final db = await instance.database;
-
+    // await db.delete('PlayLists');
+    // await db.delete('Video');
     Map<String, String> playlistData = dataInstance.playList.toJson();
 
     final playList = await db.rawQuery(

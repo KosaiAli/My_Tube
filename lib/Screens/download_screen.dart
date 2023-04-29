@@ -35,19 +35,21 @@ class _DownloadScreenState extends State<DownloadScreen> {
             children: [
               TextButton(
                   onPressed: () {
+                    dataCenter.initDownloadQueue();
                     dataCenter.downloadAll();
                   },
-                  child: Text('start all')),
+                  child: const Text('start all')),
               Expanded(
                 child: ListView.builder(
                   itemCount: dataCenter.videos.length,
                   itemBuilder: (context, index) {
                     return VideoCard(
-                      video: dataCenter.videos[index],
+                      id: dataCenter.videos[index].id!,
                     );
                   },
                 ),
               ),
+              const SizedBox(height: 50)
             ],
           ),
         );

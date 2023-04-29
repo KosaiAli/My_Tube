@@ -131,7 +131,6 @@ class _MainScreenState extends State<MainScreen> {
                             child: ListView.builder(
                               itemCount: dataCenter.playListData.length,
                               itemBuilder: (context, index) {
-                                print(dataCenter.playListData.length);
                                 var video = dataCenter.playListData[index];
                                 return Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -221,7 +220,6 @@ class _MainScreenState extends State<MainScreen> {
                         right: 0,
                         child: GestureDetector(
                           onTap: () async {
-                            var list = ["WgVQjr5PuXA", "14CkH6s4F7A"];
                             await VideoDataBase.instance
                                 .createPLaylist(dataCenter);
                             dataCenter.downloadList();
@@ -232,10 +230,10 @@ class _MainScreenState extends State<MainScreen> {
                           },
                           child: Container(
                             color: Colors.blue,
-                            child: const Text('download'),
                             padding: const EdgeInsets.all(20),
                             alignment: Alignment.center,
                             width: double.infinity,
+                            child: const Text('download'),
                           ),
                         ),
                       ),

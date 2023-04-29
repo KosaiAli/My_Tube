@@ -1,20 +1,19 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:developer';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 
-import '../http/client.dart';
 import '../Models/playlist_model.dart';
 import '../Models/database.dart';
-import '../Models/result.dart';
+import '../Models/video_model.dart';
 import '../utility.dart';
 
 class DataCenter extends ChangeNotifier {
   List<VideoModel> playListData = [];
+  List<VideoModel> queueVideos = [];
   final List<String> _videosToDownload = [];
   final List<VideoModel> videos = [];
 
@@ -22,7 +21,8 @@ class DataCenter extends ChangeNotifier {
 
   bool loading = false;
 
-  var dio = Dio();
+  Dio dio = Dio();
+  CancelToken cancelToken = CancelToken();
 
   Future prepareDownloadList(String text) async {
     playListData.clear();
@@ -52,6 +52,7 @@ class DataCenter extends ChangeNotifier {
       'maxResults': '20',
       'mine': 'true'
     };
+
     String baseUrl = 'youtube.googleapis.com';
 
     Uri uri = Uri.https(
@@ -67,10 +68,12 @@ class DataCenter extends ChangeNotifier {
       var response = await http.get(uri, headers: headers);
 
       var itemList = jsonDecode(response.body)['items'];
+      var mainItem = itemList[0]['snippet'];
       playList = PlayList(
-          itemList[0]['snippet']['playlistId'],
-          '${itemList[0]['snippet']['title']} Mix',
-          itemList[0]['snippet']['thumbnails']['high']['url']);
+        mainItem['playlistId'],
+        '${mainItem['title']} Mix',
+        mainItem['thumbnails']['high']['url'],
+      );
 
       for (var video in itemList) {
         File videoFile =
@@ -159,40 +162,88 @@ class DataCenter extends ChangeNotifier {
     if (video.existedOnStorage) {
       return;
     }
-
-    video.downloading = true;
+    dio = Dio();
+    cancelToken = CancelToken();
+    video.videoStatus = Downloadstatus.downloading;
     notifyListeners();
-    var downloadLink = await DownloadnClient.getListDownloadLisnk(video.id);
+    String baseURL = 'clotted-boxcars.000webhostapp.com';
+    String listAPI = 'api/videoDetails';
+    var url = Uri.https(
+      baseURL,
+      '$listAPI/${video.id}',
+    );
+    try {
+      if (video.videoUrl == null) {
+        var response = await dio.getUri(url);
 
-    await getDownloadPath().then((value) async {
-      log('$value/${video.title}$format');
-      await dio.download(
-        downloadLink,
-        '$value/${video.title}.$format',
-        onReceiveProgress: (count, total) {
+        var downloadLink = response.data['data']['mp4']['download'];
+        video.videoUrl = downloadLink;
+      }
+
+      await getDownloadPath().then((value) async {
+        await dio.download(video.thumb, '$value/${video.title}.jpg');
+
+        await dio.download(video.videoUrl!, '$value/${video.title}.$format',
+            onReceiveProgress: (count, total) {
           video.downloaded = count / total;
           notifyListeners();
-        },
-      );
-    });
-    exists(video.title, video.id);
+        }, cancelToken: cancelToken);
+      });
 
-    video.downloading = false;
-    notifyListeners();
+      exists(video.title, video.id);
+
+      video.videoStatus = Downloadstatus.stopped;
+      notifyListeners();
+    } on DioError catch (e) {
+      if (e.error.runtimeType != SocketException) {
+        video.videoStatus = Downloadstatus.stopped;
+        return;
+      }
+
+      video.videoStatus = Downloadstatus.error;
+      notifyListeners();
+    }
+  }
+
+  void initDownloadQueue() {
+    queueVideos = videos.where((element) {
+      if (!element.existedOnStorage) {
+        element.videoStatus = Downloadstatus.inQueue;
+        return !element.existedOnStorage;
+      }
+
+      return false;
+    }).toList();
   }
 
   Future<void> downloadAll() async {
-    for (var element in videos) {
-      if (!element.existedOnStorage) {
-        await downloadVideo(element, 'mp4');
-      }
+    for (var element in queueVideos) {
+      await downloadVideo(element, 'mp4');
     }
   }
 
   void downloadList() async {
+    final list = <VideoModel>[];
     for (var element in _videosToDownload) {
       final video = playListData.singleWhere((video) => element == video.id);
-      await downloadVideo(video, 'mp4');
+      video.videoStatus = Downloadstatus.inQueue;
+      list.add(video);
     }
+    queueVideos = list;
+    downloadAll();
+  }
+
+  void skipItem(id) {
+    var video = videos.singleWhere((element) => element.id == id);
+    if (video.videoStatus == Downloadstatus.downloading) {
+      dio.close();
+      cancelToken.cancel();
+    }
+
+    queueVideos.removeWhere((element) => element.id == video.id);
+
+    video.videoStatus = Downloadstatus.stopped;
+    downloadAll();
+    notifyListeners();
   }
 }
