@@ -69,6 +69,11 @@ class _MainScreenState extends State<MainScreen> {
   int _selectedPageIndex = 0;
 
   void _selectPage(int index) {
+    pageController.animateToPage(
+      index,
+      duration: Duration(milliseconds: 100),
+      curve: Curves.linear,
+    );
     setState(() {
       _selectedPageIndex = index;
     });
@@ -81,10 +86,11 @@ class _MainScreenState extends State<MainScreen> {
   PanelController panelController = PanelController();
   final List<VideoModel> videosToDownload = [];
 
+  PageController pageController = PageController();
   @override
   void initState() {
     Provider.of<DataCenter>(context, listen: false).initDownloadVideos();
-    _pages = [const VideoPLayerScreen(), const DownloadScreen(null)];
+    _pages = [const VideoPLayerScreen(), const DownloadScreen()];
     ReceiveSharingIntent.getTextStream().listen((text) async {
       panelController.open();
       await Provider.of<DataCenter>(context, listen: false)
@@ -240,7 +246,10 @@ class _MainScreenState extends State<MainScreen> {
                     ],
                   )
                 : const Text('loading'),
-            body: _pages[_selectedPageIndex]),
+            body: PageView(
+              controller: pageController,
+              children: const [VideoPLayerScreen(), DownloadScreen()],
+            )),
       );
     });
   }

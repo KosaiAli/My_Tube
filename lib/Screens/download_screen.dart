@@ -5,8 +5,8 @@ import '../Models/data_center.dart';
 import '../Widgets/video_card.dart';
 
 class DownloadScreen extends StatefulWidget {
-  const DownloadScreen(this.url, {super.key});
-  final String? url;
+  const DownloadScreen({super.key});
+
   @override
   State<DownloadScreen> createState() => _DownloadScreenState();
 }
@@ -16,8 +16,6 @@ class _DownloadScreenState extends State<DownloadScreen> {
 
   @override
   void initState() {
-    textEditingController.text = widget.url ?? '';
-
     super.initState();
   }
 

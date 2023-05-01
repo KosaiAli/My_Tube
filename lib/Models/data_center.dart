@@ -14,6 +14,7 @@ import '../utility.dart';
 class DataCenter extends ChangeNotifier {
   List<VideoModel> playListData = [];
   List<VideoModel> queueVideos = [];
+  List<PlayList> playlists = [];
   final List<String> _videosToDownload = [];
   final List<VideoModel> videos = [];
 
@@ -122,6 +123,12 @@ class DataCenter extends ChangeNotifier {
         videoFile.exists().then((exists) {
           videos.add(VideoModel.createPostResult(element, exists));
         });
+      }
+    });
+    await VideoDataBase.instance.fetchPlaylists().then((value) {
+      playlists = [];
+      for (var element in value) {
+        playlists.add(PlayList.creatPlaylist(element));
       }
     });
     notifyListeners();

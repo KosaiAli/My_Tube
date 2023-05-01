@@ -65,7 +65,7 @@ CREATE TABLE Video (
       return downloadedVideos
           .any((downloadedVideo) => downloadedVideo['Id'] == videoId);
     });
-
+    print(videos);
     for (var id in videos) {
       final video =
           dataInstance.playListData.firstWhere((element) => element.id == id);

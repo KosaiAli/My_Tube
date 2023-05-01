@@ -12,4 +12,8 @@ class PlayList {
       'Image': image,
     };
   }
+
+  factory PlayList.creatPlaylist(Map object) {
+    return PlayList(object['Id'], object['Name'], object['Image']);
+  }
 }

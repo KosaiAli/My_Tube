@@ -1,9 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:my_youtube/Models/data_center.dart';
+import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
-import '../Models/database.dart';
+import '../Widgets/playlist_card.dart';
 
 class VideoPLayerScreen extends StatefulWidget {
   const VideoPLayerScreen({super.key});
@@ -18,40 +18,24 @@ class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
   List videos = [];
   @override
   void initState() {
-    printAllvideos('/storage/emulated/0/');
     super.initState();
-  }
-
-  Future<void> printAllvideos(String path) async {
-    // var dirs = Directory(path).listSync();
-
-    // for (var element in dirs) {
-    //   if (FileManager.isFile(element)) {
-    //     if (FileManager.getFileExtension(element) == 'mp4') {
-    //       videos.add(element.path);
-    //       print(element.path);
-    //     }
-    //     continue;
-    //   }
-    //   printAllvideos(element.path);
-    // }
-    videos = await VideoDataBase.instance.fetchPlaylists();
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ListView.builder(
-        itemCount: videos.length,
-        itemBuilder: (context, index) {
-          return SizedBox(
-            height: 200,
-            child: Text(videos[index]['Name']),
-          );
-        },
-      ),
-    );
+    return Consumer<DataCenter>(builder: (context, dataCenter, child) {
+      return Scaffold(
+        backgroundColor: Colors.grey[800],
+        body: ListView.builder(
+          itemCount: dataCenter.playlists.length,
+          itemBuilder: (context, index) {
+            return PlayListCard(
+              id: dataCenter.playlists[index].id,
+            );
+          },
+        ),
+      );
+    });
     // return Scaffold(
     //   body: Column(
     //     mainAxisAlignment: MainAxisAlignment.center,

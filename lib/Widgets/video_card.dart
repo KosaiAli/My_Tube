@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,11 +16,14 @@ class VideoCard extends StatefulWidget {
 
 class _VideoCardState extends State<VideoCard> {
   late VideoModel video;
+  late File image;
   @override
   void initState() {
     video = Provider.of<DataCenter>(context, listen: false)
         .videos
         .firstWhere((element) => element.id == widget.id);
+    image = File('/storage/emulated/0/Videos/${video.title}.jpg');
+
     super.initState();
   }
 
@@ -35,6 +39,11 @@ class _VideoCardState extends State<VideoCard> {
   }
 
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Consumer<DataCenter>(builder: (context, dataCenter, child) {
       return Padding(
@@ -44,15 +53,32 @@ class _VideoCardState extends State<VideoCard> {
           children: [
             SizedBox(
               width: 100,
-              height: 100,
+              height: 120,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: video.existedOnStorage
-                    ? Builder(
-                        builder: (context) {
-                          File image = File(
-                              '/storage/emulated/0/Videos/${video.title}.jpg');
-                          return Image.file(image);
+                    ? FutureBuilder<bool>(
+                        future: image.exists(),
+                        builder: (context, snaphot) {
+                          if (snaphot.data != null && snaphot.data == true) {
+                            // print(value);
+                            return Image.file(image);
+                          }
+
+                          return GestureDetector(
+                              onTap: () async {
+                                Dio dio = Dio();
+                                await dio
+                                    .download(
+                                  video.thumb,
+                                  '/storage/emulated/0/Videos/${video.title}.jpg',
+                                  onReceiveProgress: (count, total) {},
+                                )
+                                    .then((value) {
+                                  setState(() {});
+                                });
+                              },
+                              child: Icon(Icons.download_outlined));
                         },
                       )
                     : Image.network(
@@ -64,7 +90,7 @@ class _VideoCardState extends State<VideoCard> {
             const SizedBox(width: 20),
             Expanded(
               child: SizedBox(
-                height: 105,
+                height: 115,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
