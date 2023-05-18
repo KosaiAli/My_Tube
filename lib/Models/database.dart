@@ -21,7 +21,7 @@ class VideoDataBase {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filepath);
 
-    return await openDatabase(path, version: 1, onCreate: _creatDB);
+    return await openDatabase(path, version: 2, onCreate: _creatDB);
   }
 
   Future _creatDB(Database db, int version) async {
@@ -65,7 +65,6 @@ CREATE TABLE Video (
       return downloadedVideos
           .any((downloadedVideo) => downloadedVideo['Id'] == videoId);
     });
-    print(videos);
     for (var id in videos) {
       final video =
           dataInstance.playListData.firstWhere((element) => element.id == id);

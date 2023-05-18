@@ -5,6 +5,7 @@ import '../Models/data_center.dart';
 import '../Widgets/video_card.dart';
 
 class DownloadScreen extends StatefulWidget {
+  static const routeName = 'DownloadScreen';
   const DownloadScreen({super.key});
 
   @override
@@ -13,16 +14,6 @@ class DownloadScreen extends StatefulWidget {
 
 class _DownloadScreenState extends State<DownloadScreen> {
   TextEditingController textEditingController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +30,8 @@ class _DownloadScreenState extends State<DownloadScreen> {
                   child: const Text('start all')),
               Expanded(
                 child: ListView.builder(
+                  controller: dataCenter.downloadScreenController,
+                  physics: const BouncingScrollPhysics(),
                   itemCount: dataCenter.videos.length,
                   itemBuilder: (context, index) {
                     return VideoCard(

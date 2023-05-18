@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:my_youtube/Models/data_center.dart';
+import 'package:my_youtube/Screens/playlist_player_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:video_player/video_player.dart';
 
+import '../Models/video_controller.dart';
 import '../Widgets/playlist_card.dart';
 
-class VideoPLayerScreen extends StatefulWidget {
-  const VideoPLayerScreen({super.key});
-
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+  static const routeName = 'HomeScreen';
   @override
-  State<VideoPLayerScreen> createState() => _VideoPLayerScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
+class _HomeScreenState extends State<HomeScreen> {
   late VideoPlayerController videoPlayerController;
   bool filePicked = false;
   List videos = [];
@@ -23,19 +26,43 @@ class _VideoPLayerScreenState extends State<VideoPLayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataCenter>(builder: (context, dataCenter, child) {
-      return Scaffold(
-        backgroundColor: Colors.grey[800],
-        body: ListView.builder(
-          itemCount: dataCenter.playlists.length,
-          itemBuilder: (context, index) {
-            return PlayListCard(
-              id: dataCenter.playlists[index].id,
-            );
-          },
-        ),
-      );
-    });
+    var mdeiaQuery = MediaQuery.of(context);
+    return SafeArea(
+      child: Consumer<DataCenter>(
+        builder: (context, dataCenter, child) {
+          return Consumer<VideoController>(
+            builder: (context, videoController, child) {
+              return Scaffold(
+                backgroundColor: const Color(0xFF212121),
+                body: SizedBox(
+                  height: mdeiaQuery.size.height - mdeiaQuery.viewPadding.top,
+                  child: SlidingUpPanel(
+                    isDraggable: false,
+                    controller: videoController.panelController,
+                    panel: videoController.currentPLayListID == null
+                        ? Container()
+                        : const PlaylistPlayerScreen(),
+                    minHeight: videoController.currentPLayListID == null
+                        ? 0
+                        : 70 + kBottomNavigationBarHeight,
+                    maxHeight: MediaQuery.of(context).size.height,
+                    body: ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: dataCenter.playlists.length,
+                      itemBuilder: (context, index) {
+                        return PlayListCard(
+                          id: dataCenter.playlists[index].id,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
     // return Scaffold(
     //   body: Column(
     //     mainAxisAlignment: MainAxisAlignment.center,

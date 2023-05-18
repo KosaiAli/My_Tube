@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -9,13 +10,14 @@ import 'package:http/http.dart' as http;
 import '../Models/playlist_model.dart';
 import '../Models/database.dart';
 import '../Models/video_model.dart';
+import '../constant.dart';
 import '../utility.dart';
 
 class DataCenter extends ChangeNotifier {
   List<VideoModel> playListData = [];
   List<VideoModel> queueVideos = [];
   List<PlayList> playlists = [];
-  final List<String> _videosToDownload = [];
+  Set<String> _videosToDownload = {};
   final List<VideoModel> videos = [];
 
   late PlayList playList;
@@ -23,7 +25,21 @@ class DataCenter extends ChangeNotifier {
   bool loading = false;
 
   Dio dio = Dio();
+  http.Client client = http.Client();
   CancelToken cancelToken = CancelToken();
+
+  ScrollController downloadScreenController = ScrollController();
+
+  int _selectedPageIndex = 0;
+
+  set selectedPageIndex(index) {
+    _selectedPageIndex = index;
+    notifyListeners();
+  }
+
+  int get selectedPageIndex {
+    return _selectedPageIndex;
+  }
 
   Future prepareDownloadList(String text) async {
     playListData.clear();
@@ -32,8 +48,10 @@ class DataCenter extends ChangeNotifier {
     if (loading) {
       return;
     }
+
     loading = true;
     String playlistID;
+
     try {
       playlistID =
           text.substring(text.indexOf('list=') + 5, text.indexOf('&playnext'));
@@ -65,8 +83,9 @@ class DataCenter extends ChangeNotifier {
     Map<String, String> headers = {
       HttpHeaders.contentTypeHeader: 'application/json'
     };
+
     try {
-      var response = await http.get(uri, headers: headers);
+      var response = await client.get(uri, headers: headers);
 
       var itemList = jsonDecode(response.body)['items'];
       var mainItem = itemList[0]['snippet'];
@@ -78,7 +97,7 @@ class DataCenter extends ChangeNotifier {
 
       for (var video in itemList) {
         File videoFile =
-            File('/storage/emulated/0/Videos/${video['snippet']['title']}.mp4');
+            File('$kFolderUrlBase/${video['snippet']['title']}.mp4');
 
         await videoFile.exists().then((value) {
           playListData.add(
@@ -97,6 +116,7 @@ class DataCenter extends ChangeNotifier {
       rethrow;
     }
     loading = false;
+    initDownloadVideos();
     notifyListeners();
   }
 
@@ -116,31 +136,34 @@ class DataCenter extends ChangeNotifier {
 
   void initDownloadVideos() async {
     videos.clear();
+
     await VideoDataBase.instance.fetchVideos().then((value) {
       for (var element in value) {
-        File videoFile =
-            File('/storage/emulated/0/Videos/${element['Name']}.mp4');
+        File videoFile = File('$kFolderUrlBase/${element['Name']}.mp4');
         videoFile.exists().then((exists) {
           videos.add(VideoModel.createPostResult(element, exists));
         });
       }
     });
+
     await VideoDataBase.instance.fetchPlaylists().then((value) {
       playlists = [];
       for (var element in value) {
         playlists.add(PlayList.creatPlaylist(element));
       }
     });
+
     notifyListeners();
   }
 
   Future<void> exists(name, id) async {
-    File videoFile = File('/storage/emulated/0/Videos/$name.mp4');
+    File videoFile = File('$kFolderUrlBase/$name.mp4');
 
     await videoFile.exists().then((value) {
       final index = videos.indexWhere((element) => element.id == id);
       videos[index].existedOnStorage = value;
     });
+
     notifyListeners();
   }
 
@@ -154,7 +177,7 @@ class DataCenter extends ChangeNotifier {
 
     Directory? directory;
     try {
-      directory = Directory('/storage/emulated/0/Videos');
+      directory = Directory(kFolderUrlBase);
       if (!await directory.exists()) {
         directory.create();
       }
@@ -165,25 +188,44 @@ class DataCenter extends ChangeNotifier {
     return directory.path;
   }
 
-  Future downloadVideo(VideoModel video, String format) async {
+  Future downloadVideo(VideoModel video, String format, times) async {
+    if (times >= 4) {
+      video.videoStatus = Downloadstatus.error;
+      notifyListeners();
+      skipItem(video.id);
+      return;
+    }
+
     if (video.existedOnStorage) {
       return;
     }
+
+    client = http.Client();
     dio = Dio();
     cancelToken = CancelToken();
     video.videoStatus = Downloadstatus.downloading;
     notifyListeners();
-    String baseURL = 'clotted-boxcars.000webhostapp.com';
-    String listAPI = 'api/videoDetails';
-    var url = Uri.https(
-      baseURL,
-      '$listAPI/${video.id}',
-    );
+
+    // String baseURL = 'clotted-boxcars.000webhostapp.com';
+    // String listAPI = 'api/videoDetails';
+    // print(video.id);
+    // var url = Uri.https(
+    //   baseURL,
+    //   '$listAPI/${video.id}',
+    // );
+
+    var url = Uri.parse(
+        'https://apimu.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.id}&type=240');
     try {
       if (video.videoUrl == null) {
-        var response = await dio.getUri(url);
-
-        var downloadLink = response.data['data']['mp4']['download'];
+        var response = await client.get(
+          url,
+          headers: {
+            'Accept': '*/*',
+            'Content-Type': 'application/json',
+          },
+        ).timeout(const Duration(seconds: 15));
+        var downloadLink = jsonDecode(response.body)['mp4']['download'];
         video.videoUrl = downloadLink;
       }
 
@@ -193,6 +235,7 @@ class DataCenter extends ChangeNotifier {
         await dio.download(video.videoUrl!, '$value/${video.title}.$format',
             onReceiveProgress: (count, total) {
           video.downloaded = count / total;
+
           notifyListeners();
         }, cancelToken: cancelToken);
       });
@@ -201,14 +244,17 @@ class DataCenter extends ChangeNotifier {
 
       video.videoStatus = Downloadstatus.stopped;
       notifyListeners();
-    } on DioError catch (e) {
-      if (e.error.runtimeType != SocketException) {
-        video.videoStatus = Downloadstatus.stopped;
-        return;
-      }
-
-      video.videoStatus = Downloadstatus.error;
-      notifyListeners();
+    } on TimeoutException catch (_) {
+      await downloadVideo(video, format, times + 1);
+    } catch (e) {
+      File file = File(
+        '$kFolderUrlBase/${video.title}.mp4',
+      );
+      await file.exists().then((exists) async {
+        if (exists) {
+          await file.delete();
+        }
+      });
     }
   }
 
@@ -224,8 +270,12 @@ class DataCenter extends ChangeNotifier {
   }
 
   Future<void> downloadAll() async {
-    for (var element in queueVideos) {
-      await downloadVideo(element, 'mp4');
+    try {
+      for (var element in queueVideos) {
+        await downloadVideo(element, 'mp4', 1);
+      }
+    } catch (e) {
+      return;
     }
   }
 
@@ -242,15 +292,34 @@ class DataCenter extends ChangeNotifier {
 
   void skipItem(id) {
     var video = videos.singleWhere((element) => element.id == id);
-    if (video.videoStatus == Downloadstatus.downloading) {
-      dio.close();
-      cancelToken.cancel();
-    }
+
+    dio.close();
+    client.close();
+    cancelToken.cancel();
 
     queueVideos.removeWhere((element) => element.id == video.id);
-
-    video.videoStatus = Downloadstatus.stopped;
-    downloadAll();
+    if (video.videoStatus != Downloadstatus.error) {
+      video.videoStatus = Downloadstatus.stopped;
+    }
     notifyListeners();
+    downloadAll();
+  }
+
+  List<VideoModel> fetchPlaylistVideos(String id) {
+    return [
+      ...videos.where((element) {
+        return element.playlistId == id;
+      }).toList()
+    ];
+  }
+
+  void scrollToVideoIndex(videosNotDownloaded) {
+    selectedPageIndex = 1;
+    _videosToDownload = videosNotDownloaded;
+    int index =
+        videos.indexWhere((element) => element.id == _videosToDownload.first);
+
+    downloadScreenController.animateTo(index * (kVideoCardSize + 15),
+        duration: const Duration(milliseconds: 300), curve: Curves.easeInExpo);
   }
 }

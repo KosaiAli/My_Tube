@@ -21,14 +21,15 @@ class VideoModel {
       required this.existedOnStorage});
 
   factory VideoModel.createPostResult(Map object, exists) {
+    
     return VideoModel(
-      title: object['title'] ?? object['Name'],
-      thumb: object['thumbnail'] ?? object['Image'],
-      // video: object['mp4']['download'] ?? '',
-      id: object['Id'],
-      channelTitle: object['channelTitle'],
-      existedOnStorage: exists,
-    );
+        title: object['title'] ?? object['Name'],
+        thumb: object['thumbnail'] ?? object['Image'],
+        // video: object['mp4']['download'] ?? '',
+        id: object['Id'],
+        channelTitle: object['channelTitle'],
+        existedOnStorage: exists,
+        playlistId: object['PlaylistId']);
   }
   // static Future<VideoModel> connectToApi(String url) async {
   //   print('connecting ..');
