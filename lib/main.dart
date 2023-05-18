@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:my_youtube/Models/video_controller.dart';
+import 'package:my_youtube/constant.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:provider/provider.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
@@ -150,6 +151,7 @@ class _MainScreenState extends State<MainScreen> {
         // ),
         body: SlidingUpPanel(
             controller: panelController,
+            color: kScaffoldColor,
             minHeight: 0,
             maxHeight: MediaQuery.of(context).size.height * 0.70,
             panel: dataCenter.playListData.isNotEmpty
@@ -159,88 +161,88 @@ class _MainScreenState extends State<MainScreen> {
                         children: [
                           const SizedBox(height: 50),
                           Expanded(
-                            child: ListView.builder(
-                              itemCount: dataCenter.playListData.length,
-                              itemBuilder: (context, index) {
-                                var video = dataCenter.playListData[index];
-                                return Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20, vertical: 15),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      SizedBox(
-                                        width: 100,
-                                        height: 100,
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              BorderRadius.circular(10),
-                                          child: Image.network(
-                                            video.thumb.toString(),
-                                            fit: BoxFit.cover,
+                            child: Padding(
+                              padding: const EdgeInsets.only(bottom: 60),
+                              child: ListView.builder(
+                                itemCount: dataCenter.playListData.length,
+                                itemBuilder: (context, index) {
+                                  var video = dataCenter.playListData[index];
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 20, vertical: 15),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        SizedBox(
+                                          width: 100,
+                                          height: 100,
+                                          child: ClipRRect(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            child: Image.network(
+                                              video.thumb.toString(),
+                                              fit: BoxFit.cover,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 20),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              video.title,
-                                              style: const TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.bold),
-                                            ),
-                                            const SizedBox(height: 5),
-                                            Text(
-                                              video.channelTitle!,
-                                              style: const TextStyle(
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            Row(
-                                              children: [
-                                                video.existedOnStorage
-                                                    ? const Text(
-                                                        'downloaded',
-                                                        style: TextStyle(
-                                                            fontSize: 14,
-                                                            color:
-                                                                Colors.green),
-                                                      )
-                                                    : const Text(
-                                                        'not downloaded',
-                                                        style: TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.red),
-                                                      ),
-                                              ],
-                                            )
-                                          ],
+                                        const SizedBox(width: 20),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(video.title,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleLarge),
+                                              const SizedBox(height: 5),
+                                              Text(video.channelTitle!,
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .titleMedium),
+                                              const SizedBox(height: 10),
+                                              Row(
+                                                children: [
+                                                  video.existedOnStorage
+                                                      ? const Text(
+                                                          'downloaded',
+                                                          style: TextStyle(
+                                                              fontSize: 14,
+                                                              color:
+                                                                  Colors.green),
+                                                        )
+                                                      : const Text(
+                                                          'not downloaded',
+                                                          style: TextStyle(
+                                                              fontSize: 14,
+                                                              color:
+                                                                  Colors.red),
+                                                        ),
+                                                ],
+                                              )
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                      Transform.scale(
-                                        scale: 1.3,
-                                        child: Checkbox(
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(7)),
-                                          value: dataCenter.videosToDownload
-                                              .contains(video.id),
-                                          onChanged: (_) {
-                                            dataCenter
-                                                .shuffleDownloadList(video.id);
-                                          },
-                                        ),
-                                      )
-                                    ],
-                                  ),
-                                );
-                              },
+                                        Transform.scale(
+                                          scale: 1.3,
+                                          child: Checkbox(
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(7)),
+                                            value: dataCenter.videosToDownload
+                                                .contains(video.id),
+                                            onChanged: (_) {
+                                              dataCenter.shuffleDownloadList(
+                                                  video.id);
+                                            },
+                                          ),
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],
@@ -264,6 +266,7 @@ class _MainScreenState extends State<MainScreen> {
                             padding: const EdgeInsets.all(20),
                             alignment: Alignment.center,
                             width: double.infinity,
+                            height: 60,
                             child: const Text('download'),
                           ),
                         ),
@@ -303,17 +306,25 @@ class _MainScreenState extends State<MainScreen> {
                 Positioned(
                   bottom: kBottomNavigationBarHeight -
                       kBottomNavigationBarHeight / 2,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Provider.of<VideoController>(context)
-                                    .currentPLayListID !=
-                                null
-                            ? Colors.blue.withOpacity(0.3)
-                            : Colors.blue),
-                    width: kBottomNavigationBarHeight,
-                    height: kBottomNavigationBarHeight,
+                  child: GestureDetector(
+                    onTap: () {
+                      // VideoDataBase.instance.createPLaylist(dataCenter);
+                      VideoDataBase.instance
+                          .fetchPlaylistVideos(dataCenter.playList.id)
+                          .then((value) => print(value));
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Provider.of<VideoController>(context)
+                                      .currentPLayListID !=
+                                  null
+                              ? Colors.blue.withOpacity(0.3)
+                              : Colors.blue),
+                      width: kBottomNavigationBarHeight,
+                      height: kBottomNavigationBarHeight,
+                    ),
                   ),
                 ),
               ],

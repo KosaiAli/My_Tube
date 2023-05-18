@@ -28,6 +28,7 @@ class VideoController extends ChangeNotifier {
   bool hidden = false;
   bool _minimized = false;
   bool isPanelClosed = false;
+  bool playedFinished = false;
 
   String? _currentPLayListID;
 
@@ -38,6 +39,7 @@ class VideoController extends ChangeNotifier {
   Duration position = const Duration();
 
   late DateTime time;
+  late Timer? timer;
 
   set currentPLayListID(id) {
     _currentPLayListID = id;
@@ -72,15 +74,17 @@ class VideoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> playListInitialize(id, datacenter) async {
+  Future<void> playListInitialize(id, DataCenter datacenter) async {
     notDownloadedVideos = {};
 
     await panelController.show();
     isPanelClosed = false;
+
+    videos = await datacenter.fetchPlaylistVideos(id);
+    playedFinished = false;
     notifyListeners();
     panelController.open();
 
-    videos = datacenter.fetchPlaylistVideos(id);
     if (controller != null && isPlaying) {
       controller!.pause();
     }
@@ -100,6 +104,9 @@ class VideoController extends ChangeNotifier {
 
     if (currentVideoIndex >= videos.length) {
       hidden = false;
+      currentVideoIndex--;
+      playedFinished = true;
+      timer!.cancel();
       notifyListeners();
       if (notDownloadedVideos.isNotEmpty) showAlert();
       return;
@@ -136,6 +143,7 @@ class VideoController extends ChangeNotifier {
             allowBackgroundPlayback: true, mixWithOthers: false));
 
     await controller!.initialize();
+    if (timer == null) initTimer();
     initializing = false;
     duration = controller!.value.duration;
     position = controller!.value.position;
@@ -143,15 +151,10 @@ class VideoController extends ChangeNotifier {
 
     controller!.addListener(listener);
     if (topPlay) controller!.play();
-
-    Future.delayed(const Duration(seconds: 4), () {
-      hidden = true;
-      notifyListeners();
-    });
   }
 
   IconData getIcon() {
-    if (currentVideoIndex >= videos.length) {
+    if (playedFinished) {
       return Icons.replay;
     }
     return isPlaying ? Icons.pause : Icons.play_arrow;
@@ -165,7 +168,8 @@ class VideoController extends ChangeNotifier {
 
   void initTimer() {
     time = DateTime.now();
-    Timer.periodic(const Duration(seconds: 1), (timer) {
+    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      print(timer.tick);
       if (DateTime.now().difference(time).inSeconds > 3) {
         hidden = true;
 
@@ -175,9 +179,9 @@ class VideoController extends ChangeNotifier {
   }
 
   Future<void> videoControl() async {
-    if (currentVideoIndex >= videos.length) {
+    if (playedFinished) {
       currentVideoIndex = 0;
-
+      playedFinished = false;
       notifyListeners();
       videoInitialize(true);
     }

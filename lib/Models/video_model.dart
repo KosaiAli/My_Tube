@@ -21,12 +21,11 @@ class VideoModel {
       required this.existedOnStorage});
 
   factory VideoModel.createPostResult(Map object, exists) {
-    
     return VideoModel(
-        title: object['title'] ?? object['Name'],
-        thumb: object['thumbnail'] ?? object['Image'],
+        title: object['title'] ?? object['name'],
+        thumb: object['thumbnail'] ?? object['image'],
         // video: object['mp4']['download'] ?? '',
-        id: object['Id'],
+        id: object['videoid'],
         channelTitle: object['channelTitle'],
         existedOnStorage: exists,
         playlistId: object['PlaylistId']);
@@ -47,10 +46,9 @@ class VideoModel {
   // }
   Map<String, String> tojson() {
     return {
-      'Id': id.toString(),
-      'Name': title.toString(),
-      'Image': thumb.toString(),
-      'PlaylistId': playlistId.toString(),
+      'videoid': id.toString(),
+      'name': title.toString(),
+      'image': thumb.toString(),
       'channelTitle': channelTitle.toString()
     };
   }

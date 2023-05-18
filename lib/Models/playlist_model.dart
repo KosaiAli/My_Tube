@@ -7,13 +7,14 @@ class PlayList {
 
   Map<String, String> toJson() {
     return {
-      'Id': id,
-      'Name': name,
-      'Image': image,
+      'playlistid': id,
+      'name': name,
+      'image': image,
     };
   }
 
   factory PlayList.creatPlaylist(Map object) {
-    return PlayList(object['Id'], object['Name'], object['Image']);
+    print(object);
+    return PlayList(object['playlistid'], object['name'], object['image']);
   }
 }

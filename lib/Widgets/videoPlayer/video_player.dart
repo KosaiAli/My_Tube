@@ -79,6 +79,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
                       GestureDetector(
                         onTap: () {
                           videoController.controller!.pause();
+                          videoController.timer?.cancel();
                           videoController.currentPLayListID = null;
                           videoController.panelController.hide();
                         },

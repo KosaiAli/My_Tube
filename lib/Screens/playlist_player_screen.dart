@@ -77,7 +77,15 @@ class _PlaylistPlayerScreenState extends State<PlaylistPlayerScreen> {
                                         child: ClipRRect(
                                             borderRadius:
                                                 BorderRadius.circular(10),
-                                            child: Image.file(image))),
+                                            child: FutureBuilder(
+                                                future: image.exists(),
+                                                builder: (context, snapshot) {
+                                                  if (snapshot.hasData &&
+                                                      snapshot.data!) {
+                                                    return Image.file(image);
+                                                  }
+                                                  return Container();
+                                                }))),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:

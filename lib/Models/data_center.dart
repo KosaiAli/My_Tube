@@ -85,6 +85,7 @@ class DataCenter extends ChangeNotifier {
     };
 
     try {
+      client = http.Client();
       var response = await client.get(uri, headers: headers);
 
       var itemList = jsonDecode(response.body)['items'];
@@ -139,7 +140,8 @@ class DataCenter extends ChangeNotifier {
 
     await VideoDataBase.instance.fetchVideos().then((value) {
       for (var element in value) {
-        File videoFile = File('$kFolderUrlBase/${element['Name']}.mp4');
+        print(element);
+        File videoFile = File('$kFolderUrlBase/${element['name']}.mp4');
         videoFile.exists().then((exists) {
           videos.add(VideoModel.createPostResult(element, exists));
         });
@@ -305,12 +307,20 @@ class DataCenter extends ChangeNotifier {
     downloadAll();
   }
 
-  List<VideoModel> fetchPlaylistVideos(String id) {
-    return [
-      ...videos.where((element) {
-        return element.playlistId == id;
-      }).toList()
-    ];
+  Future<List<VideoModel>> fetchPlaylistVideos(String id) async {
+    final List<VideoModel> videos = [];
+    await VideoDataBase.instance.fetchPlaylistVideos(id).then((value) async {
+      for (var element in value) {
+        final name = element['name'];
+        print(element);
+        File videoFile = File('$kFolderUrlBase/$name.mp4');
+        await videoFile.exists().then((exists) {
+          videos.add(VideoModel.createPostResult(element, exists));
+        });
+      }
+    });
+    print(videos);
+    return videos;
   }
 
   void scrollToVideoIndex(videosNotDownloaded) {

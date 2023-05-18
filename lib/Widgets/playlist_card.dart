@@ -6,6 +6,7 @@ import 'package:my_youtube/Models/data_center.dart';
 import 'package:my_youtube/Models/playlist_model.dart';
 import 'package:my_youtube/Models/video_controller.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../constant.dart';
 
@@ -65,10 +66,11 @@ class _PlayListCardState extends State<PlayListCard> {
                       return GestureDetector(
                           onTap: () async {
                             Dio dio = Dio();
+                            await Permission.storage.request();
                             await dio
                                 .download(
-                              'video.thumb',
-                              '$kFolderUrlBase/video.title.jpg',
+                              playList.image,
+                              '$kFolderUrlBase/${playList.name.substring(0, playList.name.length - 4)}.jpg',
                               onReceiveProgress: (count, total) {},
                             )
                                 .then((value) {
