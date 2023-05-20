@@ -122,7 +122,7 @@ class VideoController extends ChangeNotifier {
 
     if (!exists) {
       log(videos[currentVideoIndex].title);
-      notDownloadedVideos.add(videos[currentVideoIndex].id!);
+      notDownloadedVideos.add(videos[currentVideoIndex].videoid!);
       if (currentVideoIndex < videos.length - 1) {
         currentVideoIndex++;
         videoInitialize(topPlay);
@@ -213,7 +213,7 @@ class VideoController extends ChangeNotifier {
   }
 
   void changeVideo(id) {
-    var index = videos.indexWhere((element) => element.id == id);
+    var index = videos.indexWhere((element) => element.videoid == id);
     currentVideoIndex = index;
     controller!.pause();
     notifyListeners();

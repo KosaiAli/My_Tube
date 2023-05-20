@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: dataCenter.playlists.length,
                       itemBuilder: (context, index) {
                         return PlayListCard(
-                          id: dataCenter.playlists[index].id,
+                          id: dataCenter.playlists[index].playlistid,
                         );
                       },
                     ),

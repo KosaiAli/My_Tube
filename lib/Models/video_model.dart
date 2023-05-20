@@ -1,31 +1,34 @@
 enum Downloadstatus { downloading, inQueue, stopped, error }
 
 class VideoModel {
+  final int? id;
   final String title;
   final String thumb;
 
   String? videoUrl;
-  final String? id;
+  final String? videoid;
   final String? channelTitle;
   final String? playlistId;
   bool existedOnStorage;
   Downloadstatus videoStatus = Downloadstatus.stopped;
   double? downloaded;
   VideoModel(
-      {required this.title,
+      {this.id,
+      required this.title,
       required this.thumb,
       this.videoUrl,
-      this.id,
+      this.videoid,
       this.channelTitle,
       this.playlistId,
       required this.existedOnStorage});
 
   factory VideoModel.createPostResult(Map object, exists) {
     return VideoModel(
+        id: object['id'],
         title: object['title'] ?? object['name'],
         thumb: object['thumbnail'] ?? object['image'],
         // video: object['mp4']['download'] ?? '',
-        id: object['videoid'],
+        videoid: object['videoid'],
         channelTitle: object['channelTitle'],
         existedOnStorage: exists,
         playlistId: object['PlaylistId']);
@@ -46,7 +49,7 @@ class VideoModel {
   // }
   Map<String, String> tojson() {
     return {
-      'videoid': id.toString(),
+      'videoid': videoid.toString(),
       'name': title.toString(),
       'image': thumb.toString(),
       'channelTitle': channelTitle.toString()

@@ -91,9 +91,9 @@ class DataCenter extends ChangeNotifier {
       var itemList = jsonDecode(response.body)['items'];
       var mainItem = itemList[0]['snippet'];
       playList = PlayList(
-        mainItem['playlistId'],
-        '${mainItem['title']} Mix',
-        mainItem['thumbnails']['high']['url'],
+        playlistid: mainItem['playlistId'],
+        name: '${mainItem['title']} Mix',
+        image: mainItem['thumbnails']['high']['url'],
       );
 
       for (var video in itemList) {
@@ -106,7 +106,7 @@ class DataCenter extends ChangeNotifier {
                 existedOnStorage: value,
                 thumb: video['snippet']['thumbnails']['high']['url'],
                 title: video['snippet']['title'],
-                id: video['snippet']['resourceId']['videoId'],
+                videoid: video['snippet']['resourceId']['videoId'],
                 channelTitle: video['snippet']['videoOwnerChannelTitle'],
                 playlistId: video['snippet']['playlistId']),
           );
@@ -162,7 +162,7 @@ class DataCenter extends ChangeNotifier {
     File videoFile = File('$kFolderUrlBase/$name.mp4');
 
     await videoFile.exists().then((value) {
-      final index = videos.indexWhere((element) => element.id == id);
+      final index = videos.indexWhere((element) => element.videoid == id);
       videos[index].existedOnStorage = value;
     });
 
@@ -194,7 +194,7 @@ class DataCenter extends ChangeNotifier {
     if (times >= 4) {
       video.videoStatus = Downloadstatus.error;
       notifyListeners();
-      skipItem(video.id);
+      skipItem(video.videoid);
       return;
     }
 
@@ -217,7 +217,7 @@ class DataCenter extends ChangeNotifier {
     // );
 
     var url = Uri.parse(
-        'https://apimu.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.id}&type=240');
+        'https://apimu.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.videoid}&type=240');
     try {
       if (video.videoUrl == null) {
         var response = await client.get(
@@ -242,7 +242,7 @@ class DataCenter extends ChangeNotifier {
         }, cancelToken: cancelToken);
       });
 
-      exists(video.title, video.id);
+      exists(video.title, video.videoid);
 
       video.videoStatus = Downloadstatus.stopped;
       notifyListeners();
@@ -284,7 +284,8 @@ class DataCenter extends ChangeNotifier {
   void downloadList() async {
     final list = <VideoModel>[];
     for (var element in _videosToDownload) {
-      final video = playListData.singleWhere((video) => element == video.id);
+      final video =
+          playListData.singleWhere((video) => element == video.videoid);
       video.videoStatus = Downloadstatus.inQueue;
       list.add(video);
     }
@@ -293,13 +294,13 @@ class DataCenter extends ChangeNotifier {
   }
 
   void skipItem(id) {
-    var video = videos.singleWhere((element) => element.id == id);
+    var video = videos.singleWhere((element) => element.videoid == id);
 
     dio.close();
     client.close();
     cancelToken.cancel();
 
-    queueVideos.removeWhere((element) => element.id == video.id);
+    queueVideos.removeWhere((element) => element.videoid == video.videoid);
     if (video.videoStatus != Downloadstatus.error) {
       video.videoStatus = Downloadstatus.stopped;
     }
@@ -326,8 +327,8 @@ class DataCenter extends ChangeNotifier {
   void scrollToVideoIndex(videosNotDownloaded) {
     selectedPageIndex = 1;
     _videosToDownload = videosNotDownloaded;
-    int index =
-        videos.indexWhere((element) => element.id == _videosToDownload.first);
+    int index = videos
+        .indexWhere((element) => element.videoid == _videosToDownload.first);
 
     downloadScreenController.animateTo(index * (kVideoCardSize + 15),
         duration: const Duration(milliseconds: 300), curve: Curves.easeInExpo);

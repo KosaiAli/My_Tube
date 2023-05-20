@@ -8,6 +8,7 @@ import 'package:my_youtube/Models/video_controller.dart';
 import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../Screens/edit_playlist_screen.dart';
 import '../constant.dart';
 
 class PlayListCard extends StatefulWidget {
@@ -25,7 +26,7 @@ class _PlayListCardState extends State<PlayListCard> {
     super.initState();
     playList = Provider.of<DataCenter>(context, listen: false)
         .playlists
-        .firstWhere((element) => element.id == widget.id);
+        .firstWhere((element) => element.playlistid == widget.id);
     var name = playList.name;
     image = File('$kFolderUrlBase/${name.substring(0, name.length - 4)}.jpg');
   }
@@ -40,10 +41,9 @@ class _PlayListCardState extends State<PlayListCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigator.of(context)
-        //     .pushNamed(PlaylistPlayerScreen.routeName, arguments: widget.id);
         Provider.of<VideoController>(context, listen: false).playListInitialize(
-            playList.id, Provider.of<DataCenter>(context, listen: false));
+            playList.playlistid,
+            Provider.of<DataCenter>(context, listen: false));
       },
       child: Container(
         color: Colors.grey[900],
@@ -99,14 +99,28 @@ class _PlayListCardState extends State<PlayListCard> {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              child: Text(
-                playList.name,
-                style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.01,
-                    wordSpacing: 0.01,
-                    color: Colors.white),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    playList.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.01,
+                      wordSpacing: 0.01,
+                      color: Colors.white,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).pushNamed(
+                          PlayListEditScreen.routeName,
+                          arguments: playList.playlistid);
+                    },
+                    child: const Icon(Icons.edit_rounded),
+                  )
+                ],
               ),
             ),
           ],

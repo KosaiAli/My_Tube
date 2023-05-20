@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Models/data_center.dart';
+import '../Models/video_model.dart';
 import '../Widgets/video_card.dart';
 
 class DownloadScreen extends StatefulWidget {
@@ -34,8 +35,25 @@ class _DownloadScreenState extends State<DownloadScreen> {
                   physics: const BouncingScrollPhysics(),
                   itemCount: dataCenter.videos.length,
                   itemBuilder: (context, index) {
-                    return VideoCard(
-                      id: dataCenter.videos[index].id!,
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 15),
+                      child: VideoCard(
+                        id: dataCenter.videos[index].videoid!,
+                        icon: IconButton(
+                            onPressed: () async {
+                              print(dataCenter.videos[index].videoStatus);
+                              if (dataCenter.videos[index].videoStatus ==
+                                  Downloadstatus.downloading) {
+                                dataCenter
+                                    .skipItem(dataCenter.videos[index].videoid);
+                                return;
+                              }
+                              await dataCenter.downloadVideo(
+                                  dataCenter.videos[index], 'mp4', 1);
+                            },
+                            icon: Icon(getIcon(dataCenter, index))),
+                      ),
                     );
                   },
                 ),
@@ -46,5 +64,17 @@ class _DownloadScreenState extends State<DownloadScreen> {
         );
       },
     );
+  }
+
+  IconData getIcon(dataCenter, index) {
+    if (dataCenter.videos[index].existedOnStorage) {
+      return Icons.download_done;
+    } else if (dataCenter.videos[index].videoStatus ==
+        Downloadstatus.downloading) {
+      return Icons.pause;
+    } else if (dataCenter.videos[index].videoStatus == Downloadstatus.inQueue) {
+      return Icons.watch_later_outlined;
+    }
+    return Icons.download;
   }
 }

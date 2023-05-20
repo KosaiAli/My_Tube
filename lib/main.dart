@@ -11,6 +11,7 @@ import './Models/data_center.dart';
 import './Models/database.dart';
 import './Screens/download_screen.dart';
 import './Models/video_model.dart';
+import 'Screens/edit_playlist_screen.dart';
 import 'Screens/home_screen.dart';
 import 'Screens/playlist_player_screen.dart';
 
@@ -23,67 +24,25 @@ class Main extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (ctx) => DataCenter(),
+        ),
+        ChangeNotifierProvider(
+          create: (ctx) => VideoController(buildContext: ctx),
+        ),
+      ],
+      child: MaterialApp(
         themeMode: ThemeMode.dark,
         darkTheme: ThemeData(
           brightness: Brightness.dark,
-          // textTheme: TextTheme().copyWith(
-          //   bodySmall: TextStyle(color: Colors.white),
-          // ),
         ),
         debugShowCheckedModeBanner: false,
         routes: {
-          HomeScreen.routeName: (ctx) => const HomeScreen(),
-          DownloadScreen.routeName: (ctx) => const DownloadScreen(),
-          PlaylistPlayerScreen.routeName: (ctx) => const PlaylistPlayerScreen()
+          PlayListEditScreen.routeName: (ctx) => const PlayListEditScreen()
         },
-        home: MultiProvider(providers: [
-          ChangeNotifierProvider(
-            create: (ctx) => DataCenter(),
-          ),
-          ChangeNotifierProvider(
-            create: (ctx) => VideoController(buildContext: ctx),
-          )
-        ], child: const MainScreen()));
-  }
-}
-
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({
-    super.key,
-  });
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-
-    // ReceiveSharingIntent.getInitialText().then((value) {
-    //   if (value != null) {
-    //     print('1');
-    //     Navigator.of(context).pushReplacement(MaterialPageRoute(
-    //       builder: (context) => MainScreen(value),
-    //     ));
-    //   }
-    // });
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: FlutterLogo(
-          size: 50,
-        ),
+        home: const MainScreen(),
       ),
     );
   }
@@ -231,10 +190,10 @@ class _MainScreenState extends State<MainScreen> {
                                                 borderRadius:
                                                     BorderRadius.circular(7)),
                                             value: dataCenter.videosToDownload
-                                                .contains(video.id),
+                                                .contains(video.videoid),
                                             onChanged: (_) {
                                               dataCenter.shuffleDownloadList(
-                                                  video.id);
+                                                  video.videoid);
                                             },
                                           ),
                                         )
@@ -310,7 +269,7 @@ class _MainScreenState extends State<MainScreen> {
                     onTap: () {
                       // VideoDataBase.instance.createPLaylist(dataCenter);
                       VideoDataBase.instance
-                          .fetchPlaylistVideos(dataCenter.playList.id)
+                          .fetchPlaylistVideos(dataCenter.playList.playlistid)
                           .then((value) => print(value));
                     },
                     child: AnimatedContainer(

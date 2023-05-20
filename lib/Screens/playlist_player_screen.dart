@@ -50,7 +50,7 @@ class _PlaylistPlayerScreenState extends State<PlaylistPlayerScreen> {
                             onTap: () async {
                               if (await file.exists()) {
                                 videoController.changeVideo(
-                                    videoController.videos[index].id);
+                                    videoController.videos[index].videoid);
                               }
                             },
                             child: Container(
