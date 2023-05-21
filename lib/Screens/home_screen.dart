@@ -7,6 +7,7 @@ import 'package:video_player/video_player.dart';
 
 import '../Models/video_controller.dart';
 import '../Widgets/playlist_card.dart';
+import '../constant.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,29 +25,41 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
   }
 
+  double _getMinHeight(videoController, mdeiaQuery) =>
+      videoController.currentPLayListID == null
+          ? 0
+          : 70 + kBottomNavigationBarHeight - mdeiaQuery.padding.top;
+
   @override
   Widget build(BuildContext context) {
     var mdeiaQuery = MediaQuery.of(context);
-    return SafeArea(
-      child: Consumer<DataCenter>(
-        builder: (context, dataCenter, child) {
-          return Consumer<VideoController>(
-            builder: (context, videoController, child) {
-              return Scaffold(
-                backgroundColor: const Color(0xFF212121),
-                body: SizedBox(
-                  height: mdeiaQuery.size.height - mdeiaQuery.viewPadding.top,
-                  child: SlidingUpPanel(
-                    isDraggable: false,
-                    controller: videoController.panelController,
-                    panel: videoController.currentPLayListID == null
-                        ? Container()
-                        : const PlaylistPlayerScreen(),
-                    minHeight: videoController.currentPLayListID == null
-                        ? 0
-                        : 70 + kBottomNavigationBarHeight,
-                    maxHeight: MediaQuery.of(context).size.height,
-                    body: ListView.builder(
+    return Consumer<DataCenter>(
+      builder: (context, dataCenter, child) {
+        return Consumer<VideoController>(
+          builder: (context, videoController, child) {
+            return Scaffold(
+              backgroundColor: const Color(0xFF212121),
+              body: WillPopScope(
+                onWillPop: () async {
+                  if (!videoController.minimized) {
+                    await videoController.minimize();
+                    return false;
+                  }
+                  return true;
+                },
+                child: SlidingUpPanel(
+                  isDraggable: false,
+                  controller: videoController.panelController,
+                  panel: videoController.currentPLayListID == null
+                      ? Container()
+                      : const PlaylistPlayerScreen(),
+                  minHeight: _getMinHeight(videoController, mdeiaQuery),
+                  maxHeight: mdeiaQuery.size.height,
+                  body: Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: kBottombarHeight,
+                    ),
+                    child: ListView.builder(
                       physics: const BouncingScrollPhysics(),
                       itemCount: dataCenter.playlists.length,
                       itemBuilder: (context, index) {
@@ -57,53 +70,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-              );
-            },
-          );
-        },
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
-    // return Scaffold(
-    //   body: Column(
-    //     mainAxisAlignment: MainAxisAlignment.center,
-    //     children: [
-    //       filePicked && videoPlayerController.value.isInitialized
-    //           ? AspectRatio(
-    //               aspectRatio: videoPlayerController.value.aspectRatio,
-    //               child: VideoPlayer(videoPlayerController),
-    //             )
-    //           : Container(),
-    //       Center(
-    //         child: ElevatedButton(
-    //             onPressed: () async {
-    //               File file = File(
-    //                 '/storage/emulated/0/Main/Queen – Bohemian Rhapsody (Official Video Remastered).mp4',
-    //               );
-    //               Directory dir = Directory('/storage/emulated/0/Download');
-
-    //               print(file.path);
-    //               videoPlayerController = VideoPlayerController.file(file)
-    //                 ..initialize().then((value) {
-    //                   setState(() {
-    //                     filePicked = true;
-    //                   });
-    //                 });
-
-    //               print(videoPlayerController.value.duration);
-    //             },
-    //             child: Text('pick')),
-    //       ),
-    //       SizedBox(
-    //         height: 20,
-    //       ),
-    //       ElevatedButton(
-    //           onPressed: () async {
-    //             await videoPlayerController.pause().then((value) {});
-    //           },
-    //           child: Icon(Icons.play_arrow))
-    //     ],
-    //   ),
-    // );
-    // ;
   }
 }

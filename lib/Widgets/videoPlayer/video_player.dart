@@ -31,20 +31,27 @@ class _VideoPlayerState extends State<VideoPlayer> {
         builder: (context, videoController, child) {
       return Row(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.linear,
-            height: videoController.getFrameSize(size),
-            width: videoController.minimized ? 120 : size.width,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                const VideoFrame(),
-                if (!videoController.minimized) const Curtin(),
-                if (!videoController.minimized) const ControlsButton(),
-                if (videoController.controller != null)
-                  const video_indicator.ProgressIndicator()
-              ],
+          GestureDetector(
+            onVerticalDragEnd: (details) {
+              if (!videoController.minimized) {
+                videoController.minimize();
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.linear,
+              height: videoController.getFrameSize(size),
+              width: videoController.minimized ? 120 : size.width,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const VideoFrame(),
+                  if (!videoController.minimized) const Curtin(),
+                  if (!videoController.minimized) const ControlsButton(),
+                  if (videoController.controller != null)
+                    const video_indicator.ProgressIndicator()
+                ],
+              ),
             ),
           ),
           if (videoController.isPanelClosed)
@@ -62,9 +69,14 @@ class _VideoPlayerState extends State<VideoPlayer> {
                         child: Text(
                           videoController
                               .videos[videoController.currentVideoIndex].title,
-                          style: Theme.of(context).textTheme.titleSmall,
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleSmall!
+                              .copyWith(overflow: TextOverflow.ellipsis),
+                          maxLines: 1,
                         ),
                       ),
+                    const SizedBox(width: 10),
                     if (videoController.isPanelClosed)
                       GestureDetector(
                         onTap: videoController.videoControl,

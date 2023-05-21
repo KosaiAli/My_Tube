@@ -72,20 +72,22 @@ class _PlaylistPlayerScreenState extends State<PlaylistPlayerScreen> {
                                 child: Row(
                                   children: [
                                     SizedBox(
-                                        height: 80,
-                                        width: 120,
-                                        child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                            child: FutureBuilder(
-                                                future: image.exists(),
-                                                builder: (context, snapshot) {
-                                                  if (snapshot.hasData &&
-                                                      snapshot.data!) {
-                                                    return Image.file(image);
-                                                  }
-                                                  return Container();
-                                                }))),
+                                      height: 80,
+                                      width: 120,
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(10),
+                                        child: FutureBuilder(
+                                          future: image.exists(),
+                                          builder: (context, snapshot) {
+                                            if (snapshot.hasData &&
+                                                snapshot.data!) {
+                                              return Image.file(image);
+                                            }
+                                            return Container();
+                                          },
+                                        ),
+                                      ),
+                                    ),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:

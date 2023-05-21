@@ -93,7 +93,8 @@ class DataCenter extends ChangeNotifier {
       playList = PlayList(
         playlistid: mainItem['playlistId'],
         name: '${mainItem['title']} Mix',
-        image: mainItem['thumbnails']['high']['url'],
+        image: '$kFolderUrlBase/${mainItem['title']}.jpg',
+        networkImage: mainItem['thumbnails']['medium']['url'],
       );
 
       for (var video in itemList) {
@@ -138,9 +139,8 @@ class DataCenter extends ChangeNotifier {
   void initDownloadVideos() async {
     videos.clear();
 
-    await VideoDataBase.instance.fetchVideos().then((value) {
-      for (var element in value) {
-        print(element);
+    await VideoDataBase.instance.fetchVideos().then((databaseVideos) {
+      for (var element in databaseVideos) {
         File videoFile = File('$kFolderUrlBase/${element['name']}.mp4');
         videoFile.exists().then((exists) {
           videos.add(VideoModel.createPostResult(element, exists));
@@ -148,9 +148,9 @@ class DataCenter extends ChangeNotifier {
       }
     });
 
-    await VideoDataBase.instance.fetchPlaylists().then((value) {
+    await VideoDataBase.instance.fetchPlaylists().then((databasePLaylist) {
       playlists = [];
-      for (var element in value) {
+      for (var element in databasePLaylist) {
         playlists.add(PlayList.creatPlaylist(element));
       }
     });
@@ -190,7 +190,7 @@ class DataCenter extends ChangeNotifier {
     return directory.path;
   }
 
-  Future downloadVideo(VideoModel video, String format, times) async {
+  Future downloadVideo(VideoModel video, String format, int times) async {
     if (times >= 4) {
       video.videoStatus = Downloadstatus.error;
       notifyListeners();
@@ -207,14 +207,6 @@ class DataCenter extends ChangeNotifier {
     cancelToken = CancelToken();
     video.videoStatus = Downloadstatus.downloading;
     notifyListeners();
-
-    // String baseURL = 'clotted-boxcars.000webhostapp.com';
-    // String listAPI = 'api/videoDetails';
-    // print(video.id);
-    // var url = Uri.https(
-    //   baseURL,
-    //   '$listAPI/${video.id}',
-    // );
 
     var url = Uri.parse(
         'https://apimu.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.videoid}&type=240');
@@ -310,17 +302,18 @@ class DataCenter extends ChangeNotifier {
 
   Future<List<VideoModel>> fetchPlaylistVideos(String id) async {
     final List<VideoModel> videos = [];
+
     await VideoDataBase.instance.fetchPlaylistVideos(id).then((value) async {
       for (var element in value) {
         final name = element['name'];
-        print(element);
         File videoFile = File('$kFolderUrlBase/$name.mp4');
+
         await videoFile.exists().then((exists) {
           videos.add(VideoModel.createPostResult(element, exists));
         });
       }
     });
-    print(videos);
+
     return videos;
   }
 

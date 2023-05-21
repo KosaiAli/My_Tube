@@ -16,6 +16,14 @@ class DownloadScreen extends StatefulWidget {
 class _DownloadScreenState extends State<DownloadScreen> {
   TextEditingController textEditingController = TextEditingController();
 
+  void download(dataCenter, index) async {
+    if (dataCenter.videos[index].videoStatus == Downloadstatus.downloading) {
+      dataCenter.skipItem(dataCenter.videos[index].videoid);
+      return;
+    }
+    await dataCenter.downloadVideo(dataCenter.videos[index], 'mp4', 1);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<DataCenter>(
@@ -24,11 +32,12 @@ class _DownloadScreenState extends State<DownloadScreen> {
           child: Column(
             children: [
               TextButton(
-                  onPressed: () {
-                    dataCenter.initDownloadQueue();
-                    dataCenter.downloadAll();
-                  },
-                  child: const Text('start all')),
+                onPressed: () {
+                  dataCenter.initDownloadQueue();
+                  dataCenter.downloadAll();
+                },
+                child: const Text('start all'),
+              ),
               Expanded(
                 child: ListView.builder(
                   controller: dataCenter.downloadScreenController,
@@ -39,20 +48,14 @@ class _DownloadScreenState extends State<DownloadScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 20, vertical: 15),
                       child: VideoCard(
+                        key: ValueKey(dataCenter.videos[index].videoid!),
                         id: dataCenter.videos[index].videoid!,
                         icon: IconButton(
-                            onPressed: () async {
-                              print(dataCenter.videos[index].videoStatus);
-                              if (dataCenter.videos[index].videoStatus ==
-                                  Downloadstatus.downloading) {
-                                dataCenter
-                                    .skipItem(dataCenter.videos[index].videoid);
-                                return;
-                              }
-                              await dataCenter.downloadVideo(
-                                  dataCenter.videos[index], 'mp4', 1);
-                            },
-                            icon: Icon(getIcon(dataCenter, index))),
+                          onPressed: () => download(dataCenter, index),
+                          icon: Icon(
+                            getIcon(dataCenter, index),
+                          ),
+                        ),
                       ),
                     );
                   },
@@ -69,12 +72,14 @@ class _DownloadScreenState extends State<DownloadScreen> {
   IconData getIcon(dataCenter, index) {
     if (dataCenter.videos[index].existedOnStorage) {
       return Icons.download_done;
-    } else if (dataCenter.videos[index].videoStatus ==
-        Downloadstatus.downloading) {
-      return Icons.pause;
-    } else if (dataCenter.videos[index].videoStatus == Downloadstatus.inQueue) {
-      return Icons.watch_later_outlined;
     }
-    return Icons.download;
+    switch (dataCenter.videos[index].videoStatus) {
+      case Downloadstatus.downloading:
+        return Icons.pause;
+      case Downloadstatus.inQueue:
+        return Icons.watch_later_outlined;
+      default:
+        return Icons.download;
+    }
   }
 }

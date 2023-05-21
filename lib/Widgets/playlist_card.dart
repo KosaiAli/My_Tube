@@ -24,52 +24,51 @@ class _PlayListCardState extends State<PlayListCard> {
   @override
   void initState() {
     super.initState();
-    playList = Provider.of<DataCenter>(context, listen: false)
-        .playlists
-        .firstWhere((element) => element.playlistid == widget.id);
-    var name = playList.name;
-    image = File('$kFolderUrlBase/${name.substring(0, name.length - 4)}.jpg');
   }
 
   @override
   void dispose() {
     super.dispose();
-    // print(widget.playList.name);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Provider.of<VideoController>(context, listen: false).playListInitialize(
-            playList.playlistid,
-            Provider.of<DataCenter>(context, listen: false));
-      },
-      child: Container(
-        color: Colors.grey[900],
-        margin: const EdgeInsets.symmetric(vertical: 3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                SizedBox(
-                  height: 310,
-                  child: FutureBuilder<bool>(
-                    future: image.exists(),
-                    builder: (context, snaphot) {
-                      if (snaphot.data != null && snaphot.data == true) {
-                        // print(value);
-                        return Image.file(image);
-                      }
+    return Consumer<DataCenter>(builder: (context, dataCenter, child) {
+      playList = dataCenter.playlists
+          .firstWhere((element) => element.playlistid == widget.id);
 
-                      return GestureDetector(
+      image = File(playList.image);
+      return GestureDetector(
+        onTap: () {
+          Provider.of<VideoController>(context, listen: false)
+              .initializePlaylist(playList.playlistid,
+                  Provider.of<DataCenter>(context, listen: false));
+        },
+        child: Container(
+          color: Colors.grey[900],
+          margin: const EdgeInsets.only(bottom: 3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  SizedBox(
+                    height: 310,
+                    child: FutureBuilder<bool>(
+                      future: image.exists(),
+                      builder: (context, snaphot) {
+                        if (snaphot.data != null && snaphot.data == true) {
+                          // print(value);
+                          return Image.file(image);
+                        }
+
+                        return GestureDetector(
                           onTap: () async {
                             Dio dio = Dio();
                             await Permission.storage.request();
                             await dio
                                 .download(
-                              playList.image,
+                              playList.networkImage,
                               '$kFolderUrlBase/${playList.name.substring(0, playList.name.length - 4)}.jpg',
                               onReceiveProgress: (count, total) {},
                             )
@@ -77,55 +76,63 @@ class _PlayListCardState extends State<PlayListCard> {
                               setState(() {});
                             });
                           },
-                          child: const Icon(Icons.download_outlined));
-                    },
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    width: double.infinity,
-                    color: Colors.white.withAlpha(60).withOpacity(0.5),
-                    child: const Icon(
-                      Icons.playlist_play_rounded,
-                      color: Colors.white,
-                      size: 26,
+                          child: const Center(
+                            child: Icon(Icons.download_outlined),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                )
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    playList.name,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.01,
-                      wordSpacing: 0.01,
-                      color: Colors.white,
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      width: double.infinity,
+                      color: Colors.white.withAlpha(60).withOpacity(0.5),
+                      child: const Icon(
+                        Icons.playlist_play_rounded,
+                        color: Colors.white,
+                        size: 26,
+                      ),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushNamed(
-                          PlayListEditScreen.routeName,
-                          arguments: playList.playlistid);
-                    },
-                    child: const Icon(Icons.edit_rounded),
                   )
                 ],
               ),
-            ),
-          ],
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        playList.name,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.01,
+                          wordSpacing: 0.01,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushNamed(
+                            PlayListEditScreen.routeName,
+                            arguments: playList.playlistid);
+                      },
+                      child: const Icon(Icons.edit_rounded),
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

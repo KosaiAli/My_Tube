@@ -99,7 +99,7 @@ class _VideoCardState extends State<VideoCard> {
                       ),
                     ),
                   if (video.videoStatus == Downloadstatus.error)
-                    Text(
+                    const Text(
                       'something got wrong',
                       style: TextStyle(color: Colors.red),
                     )

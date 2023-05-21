@@ -30,7 +30,8 @@ CREATE TABLE PlayLists (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   playlistid TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
-  image TEXT NOT NULL
+  image TEXT NOT NULL,
+  networkImage TEXT NOT NULL
 )
 ''');
 
@@ -57,11 +58,13 @@ CREATE TABLE Video (
     Map<String, String> playlistData = dataInstance.playList.toJson();
 
     final playList = await db.rawQuery(
-        'SELECT * FROM PlayLists WHERE playlistid LIKE "%${playlistData['Id']}%" ');
+        'SELECT * FROM PlayLists WHERE playlistid LIKE "%${playlistData['playlistid']}%" ');
 
     int? id;
     if (playList.isEmpty) {
       id = await db.insert('PlayLists', playlistData);
+    } else {
+      id = playList.first['id'] as int;
     }
 
     final videos = dataInstance.videosToDownload;
@@ -78,7 +81,7 @@ CREATE TABLE Video (
       final videoInstance = dataInstance.playListData
           .firstWhere((element) => element.videoid == videoId);
 
-      var value;
+      int? videoid;
 
       await db
           .rawQuery(
@@ -86,18 +89,17 @@ CREATE TABLE Video (
           .then(
         (video) async {
           if (video.isNotEmpty) {
-            value = video.first['id'];
+            videoid = video.first['id'] as int;
             return;
           }
           Map<String, String> videoData = videoInstance.tojson();
-          value = await db.insert('Video', videoData);
+          videoid = await db.insert('Video', videoData);
         },
       );
 
-      print(value);
-      await db.insert('playlistvideos', {'videoid': value, 'playlistid': id});
-      dataInstance.addVideo(videoInstance);
+      await db.insert('playlistvideos', {'videoid': videoid, 'playlistid': id});
     }
+    dataInstance.initDownloadVideos();
   }
 
   Future<List<Map<String, Object?>>> fetchVideos() async {
@@ -116,7 +118,7 @@ CREATE TABLE Video (
     final db = await instance.database;
     final id = await db.rawQuery(
         'SELECT id FROM PlayLists WHERE playlistid LIKE "%$playListID%"');
-    print(id.first['id']);
+
     return await db.rawQuery(
         'SELECT * FROM Video WHERE id in (SELECT videoid FROM playlistvideos WHERE playlistid = ${id.first['id']})');
   }
@@ -133,5 +135,20 @@ CREATE TABLE Video (
 
     await db.insert(
         'playlistvideos', {'videoid': videoID, 'playlistid': playlistID});
+  }
+
+  deleteAll() async {
+    final db = await instance.database;
+
+    await db.delete('PlayLists');
+    await db.delete('Video');
+    await db.delete('playlistvideos');
+  }
+
+  Future updatePlaylist(map) async {
+    final db = await instance.database;
+
+    await db.update('PlayLists', map,
+        where: 'playlistid LIKE "%${map['playlistid']}%"');
   }
 }

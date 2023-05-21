@@ -1,10 +1,8 @@
 import 'dart:async';
-import 'dart:developer';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:my_youtube/Models/data_center.dart';
-import 'package:provider/provider.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
 import 'package:video_player/video_player.dart';
 
@@ -12,10 +10,7 @@ import '../Models/video_model.dart';
 import '../constant.dart';
 
 class VideoController extends ChangeNotifier {
-  VideoController({required this.buildContext});
-  final BuildContext buildContext;
-
-  List<VideoModel> videos = [];
+  final List<VideoModel> _videos = [];
   Set<String> notDownloadedVideos = {};
 
   VideoPlayerController? controller;
@@ -34,6 +29,7 @@ class VideoController extends ChangeNotifier {
 
   String? get currentPLayListID => _currentPLayListID;
   bool get minimized => _minimized;
+  List<VideoModel> get videos => _videos;
 
   Duration duration = const Duration();
   Duration position = const Duration();
@@ -51,7 +47,14 @@ class VideoController extends ChangeNotifier {
     notifyListeners();
   }
 
+  set videos(list) {
+    videos = list;
+    notifyListeners();
+  }
+
   late void Function() listener = () async {
+    //TODO :I need to check the status of the video when it stops
+
     isPlaying = controller!.value.isPlaying;
     position = controller!.value.position;
 
@@ -62,26 +65,22 @@ class VideoController extends ChangeNotifier {
         currentVideoIndex++;
       }
       try {
-        await videoInitialize(true);
+        await initializevideo(true);
       } catch (e) {
         rethrow;
       }
     }
   };
 
-  setvideos(list) {
-    videos = list;
-    notifyListeners();
-  }
-
-  Future<void> playListInitialize(id, DataCenter datacenter) async {
+  Future<void> initializePlaylist(id, DataCenter datacenter) async {
     notDownloadedVideos = {};
 
     await panelController.show();
+
     isPanelClosed = false;
+    playedFinished = false;
 
     videos = await datacenter.fetchPlaylistVideos(id);
-    playedFinished = false;
     notifyListeners();
     panelController.open();
 
@@ -92,10 +91,10 @@ class VideoController extends ChangeNotifier {
     currentPLayListID = id;
     currentVideoIndex = 0;
 
-    videoInitialize(true);
+    initializevideo(true);
   }
 
-  Future<void> videoInitialize(topPlay) async {
+  Future<void> initializevideo(topPlay) async {
     if (initializing) return;
 
     if (controller != null) {
@@ -104,11 +103,11 @@ class VideoController extends ChangeNotifier {
 
     if (currentVideoIndex >= videos.length) {
       hidden = false;
-      currentVideoIndex--;
       playedFinished = true;
+      currentVideoIndex--;
       timer!.cancel();
       notifyListeners();
-      if (notDownloadedVideos.isNotEmpty) showAlert();
+      // if (notDownloadedVideos.isNotEmpty) showAlert();
       return;
     }
 
@@ -121,14 +120,13 @@ class VideoController extends ChangeNotifier {
     final exists = await file.exists();
 
     if (!exists) {
-      log(videos[currentVideoIndex].title);
       notDownloadedVideos.add(videos[currentVideoIndex].videoid!);
       if (currentVideoIndex < videos.length - 1) {
         currentVideoIndex++;
-        videoInitialize(topPlay);
+        initializevideo(topPlay);
         return;
       } else {
-        showAlert();
+        // showAlert();
         return;
         // panelController.close();
         // currentPLayListID = null;
@@ -138,15 +136,21 @@ class VideoController extends ChangeNotifier {
       }
     }
     initializing = true;
-    controller = VideoPlayerController.file(file,
-        videoPlayerOptions: VideoPlayerOptions(
-            allowBackgroundPlayback: true, mixWithOthers: false));
+    controller = VideoPlayerController.file(
+      file,
+      videoPlayerOptions: VideoPlayerOptions(
+          allowBackgroundPlayback: true, mixWithOthers: true),
+    );
 
     await controller!.initialize();
     if (timer == null) initTimer();
+
     initializing = false;
+    playedFinished = false;
+
     duration = controller!.value.duration;
     position = controller!.value.position;
+
     notifyListeners();
 
     controller!.addListener(listener);
@@ -169,7 +173,6 @@ class VideoController extends ChangeNotifier {
   void initTimer() {
     time = DateTime.now();
     timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      print(timer.tick);
       if (DateTime.now().difference(time).inSeconds > 3) {
         hidden = true;
 
@@ -183,7 +186,7 @@ class VideoController extends ChangeNotifier {
       currentVideoIndex = 0;
       playedFinished = false;
       notifyListeners();
-      videoInitialize(true);
+      initializevideo(true);
     }
     if (controller!.value.isPlaying) {
       controller!.pause();
@@ -203,7 +206,9 @@ class VideoController extends ChangeNotifier {
     } else if (controller != null && controller!.value.isInitialized) {
       return size.width / controller!.value.aspectRatio;
     }
-    return size.height * 0.30;
+    if (!minimized) return size.height * 0.30;
+
+    return 70;
   }
 
   void stop() {
@@ -217,7 +222,7 @@ class VideoController extends ChangeNotifier {
     currentVideoIndex = index;
     controller!.pause();
     notifyListeners();
-    videoInitialize(true);
+    initializevideo(true);
   }
 
   Future<void> minimize() async {
@@ -227,11 +232,13 @@ class VideoController extends ChangeNotifier {
       minimized = true;
       await panelController
           .animatePanelToPosition(0,
-              duration: const Duration(milliseconds: 300))
-          .then((value) {
-        isPanelClosed = true;
-        notifyListeners();
-      });
+              duration: const Duration(milliseconds: 200))
+          .then(
+        (value) {
+          isPanelClosed = true;
+          notifyListeners();
+        },
+      );
 
       return;
     }
@@ -239,74 +246,74 @@ class VideoController extends ChangeNotifier {
     minimized = false;
     notifyListeners();
     panelController.animatePanelToPosition(1,
-        duration: const Duration(milliseconds: 300));
+        duration: const Duration(milliseconds: 200));
   }
 
-  Future<void> showAlert() async {
-    await showDialog(
-      context: buildContext,
-      builder: (context) {
-        return Alert(
-          ok: ok,
-        );
-      },
-    ).then((value) => close());
-  }
+  // Future<void> showAlert() async {
+  //   await showDialog(
+  //     context: buildContext,
+  //     builder: (context) {
+  //       return Alert(
+  //         ok: ok,
+  //       );
+  //     },
+  //   ).then((value) => close());
+  // }
 
   void close() {
     currentVideoIndex = 0;
     isPlaying = false;
-    videoInitialize(false);
+    initializevideo(false);
     notifyListeners();
   }
 
-  Future<void> ok() async {
-    await panelController.close().then((value) {
-      currentPLayListID = null;
-      currentVideoIndex = 0;
+  // Future<void> ok() async {
+  //   await panelController.close().then((value) {
+  //     currentPLayListID = null;
+  //     currentVideoIndex = 0;
 
-      Provider.of<DataCenter>(buildContext, listen: false)
-          .scrollToVideoIndex(notDownloadedVideos);
-    });
-  }
+  //     Provider.of<DataCenter>(buildContext, listen: false)
+  //         .scrollToVideoIndex(notDownloadedVideos);
+  //   });
+  // }
 }
 
-class Alert extends StatelessWidget {
-  const Alert({
-    super.key,
-    required this.ok,
-  });
-  final Function() ok;
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Looks like you have not download all of your videos'),
-      content: const Text('Go to the donwload page and download them'),
-      actions: [
-        RawMaterialButton(
-          onPressed: () {},
-          child: Text(
-            'Cancel',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-          ),
-        ),
-        RawMaterialButton(
-          onPressed: () {
-            Navigator.pop(context);
-            ok();
-          },
-          child: Text(
-            'OK',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Colors.green,
-                  fontWeight: FontWeight.w900,
-                ),
-          ),
-        )
-      ],
-    );
-  }
-}
+// class Alert extends StatelessWidget {
+//   const Alert({
+//     super.key,
+//     required this.ok,
+//   });
+//   final Function() ok;
+//   @override
+//   Widget build(BuildContext context) {
+//     return AlertDialog(
+//       title: const Text('Looks like you have not download all of your videos'),
+//       content: const Text('Go to the donwload page and download them'),
+//       actions: [
+//         RawMaterialButton(
+//           onPressed: () {},
+//           child: Text(
+//             'Cancel',
+//             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+//                   color: Colors.red,
+//                   fontWeight: FontWeight.bold,
+//                 ),
+//           ),
+//         ),
+//         RawMaterialButton(
+//           onPressed: () {
+//             Navigator.pop(context);
+//             ok();
+//           },
+//           child: Text(
+//             'OK',
+//             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+//                   color: Colors.green,
+//                   fontWeight: FontWeight.w900,
+//                 ),
+//           ),
+//         )
+//       ],
+//     );
+//   }
+// }
