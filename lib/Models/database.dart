@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
@@ -130,7 +132,7 @@ CREATE TABLE Video (
         where: 'videoid LIKE "%$videoID%" AND playlistid LIKE "%$playlistID%"');
   }
 
-  addToPLaylist(playlistID, videoID) async {
+  Future addToPLaylist(playlistID, videoID) async {
     final db = await instance.database;
 
     await db.insert(
@@ -150,5 +152,39 @@ CREATE TABLE Video (
 
     await db.update('PlayLists', map,
         where: 'playlistid LIKE "%${map['playlistid']}%"');
+  }
+
+  Future<bool> hasVideo(playlistID, videoID) async {
+    final db = await instance.database;
+
+    final id = await db
+        .rawQuery('SELECT id FROM Video WHERE videoid LIKE "%$videoID%"');
+    if (id.isEmpty) {
+      return false;
+    }
+    final exists = await db.rawQuery(
+        'SELECT * FROM playlistvideos WHERE playlistid LIKE "%$playlistID%" AND videoid LIKE "%${id.first['id']}%"');
+
+    return exists.isNotEmpty;
+    // await db.rawQuery()
+  }
+
+  Future<int> addVideoToVideos(data) async {
+    final db = await instance.database;
+    int id;
+    final video = await db.rawQuery(
+        'SELECT id FROM Video WHERE videoid LIKE "%${data['videoid']}%"');
+    if (video.isNotEmpty) {
+      id = video.first['id'] as int;
+    } else {
+      id = await db.insert('Video', data);
+    }
+    return id;
+  }
+
+  Future deleteVideo(id) async {
+    final db = await instance.database;
+
+    await db.delete('Video', where: 'id LIKE "%$id%"');
   }
 }

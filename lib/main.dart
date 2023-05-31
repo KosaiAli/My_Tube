@@ -1,4 +1,8 @@
+import 'dart:developer';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 import 'package:provider/provider.dart';
 import 'package:sliding_up_panel/sliding_up_panel.dart';
@@ -12,8 +16,12 @@ import './Screens/edit_playlist_screen.dart';
 import './Screens/home_screen.dart';
 import './Widgets/custom_clipper.dart';
 import './Widgets/download_panel.dart';
+import 'Models/database.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Permission.storage.request();
+
   runApp(const Main());
 }
 
@@ -53,20 +61,59 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   PanelController panelController = PanelController();
   final List<VideoModel> videosToDownload = [];
+  bool hasList = false;
+
+  late AppLifecycleState _appLifecycleState;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    setState(() {
+      _appLifecycleState = state;
+    });
+    log(state.toString());
+  }
 
   @override
   void initState() {
+    WidgetsBinding.instance.addObserver(this);
     Provider.of<DataCenter>(context, listen: false).initDownloadVideos();
 
-    ReceiveSharingIntent.getTextStream().listen((text) async {
+    ReceiveSharingIntent.getTextStream().listen((String text) async {
+      getTextStream(text);
+    });
+    super.initState();
+  }
+
+  Future<void> getTextStream(text) async {
+    log(text);
+    log(text.contains('list').toString());
+    setState(() {
+      hasList = text.contains('list');
+    });
+    if (text.contains('list')) {
       panelController.open();
       await Provider.of<DataCenter>(context, listen: false)
           .prepareDownloadList(text);
-    });
-    super.initState();
+      return;
+    }
+    var videoID;
+    if (text.contains('youtu.be')) {
+      videoID = text.substring(text.indexOf('youtu.be') + 9);
+    } else if (text.contains('watch?v')) {
+      videoID = text.substring(
+          text.indexOf('watch?v') + 8, text.indexOf('watch?v') + 19);
+    }
+    panelController.open();
+    await Provider.of<DataCenter>(context, listen: false)
+        .prepareDownloadSingle(videoID);
+    // Navigator.push(context, MaterialPageRoute(
+    //   builder: (context) {
+    //     return DownloadSingle(videoID: videoID);
+    //   },
+    // ));
   }
 
   Expanded getBottomIconButton(
@@ -102,17 +149,21 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
     return Consumer<DataCenter>(
       builder: (context, dataCenter, child) {
         return Scaffold(
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerFloat,
           body: SlidingUpPanel(
+            isDraggable: false,
             controller: panelController,
             color: kScaffoldColor,
             minHeight: 0,
-            maxHeight: MediaQuery.of(context).size.height * 0.70,
-            panel: DownloadPanel(panelController: panelController),
+            maxHeight: mediaQuery.size.height * 0.70,
+            panel: hasList
+                ? DownloadPanel(panelController: panelController)
+                : DownloadSingle(panelController: panelController),
             body: Stack(
               alignment: Alignment.bottomCenter,
               children: [
@@ -146,12 +197,7 @@ class _MainScreenState extends State<MainScreen> {
                   bottom: kBottomNavigationBarHeight -
                       kBottomNavigationBarHeight / 2,
                   child: GestureDetector(
-                    onTap: () {
-                      // VideoDataBase.instance.createPLaylist(dataCenter);
-                      // VideoDataBase.instance.deleteAll();
-                      Provider.of<DataCenter>(context, listen: false)
-                          .initDownloadVideos();
-                    },
+                    onTap: () {},
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
@@ -173,5 +219,209 @@ class _MainScreenState extends State<MainScreen> {
         );
       },
     );
+  }
+}
+
+class DownloadSingle extends StatefulWidget {
+  const DownloadSingle({super.key, required this.panelController});
+  final PanelController panelController;
+  @override
+  State<DownloadSingle> createState() => _DownloadSingleState();
+}
+
+class _DownloadSingleState extends State<DownloadSingle> {
+  late int id;
+  bool inAnyPLaylist = false;
+  @override
+  void initState() {
+    // init();
+    super.initState();
+  }
+
+  // Future<void> init() async {
+  //   await Provider.of<DataCenter>(context, listen: false)
+  //       .prepareDownloadSingle(widget.videoID)
+  //       .then((value) {
+  //     setState(() {
+  //       id = value;
+  //     });
+  //   });
+  // }
+
+  int selectedplaylist = -1;
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<DataCenter>(builder: (context, dataCenter, child) {
+      if (dataCenter.singleVideoToDownload != null) {
+        return Scaffold(
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                  child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          height: 100,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.network(
+                              dataCenter.singleVideoToDownload!.thumb
+                                  .toString(),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(dataCenter.singleVideoToDownload!.title,
+                                  style:
+                                      Theme.of(context).textTheme.titleLarge),
+                              const SizedBox(height: 5),
+                              Text(
+                                  dataCenter
+                                      .singleVideoToDownload!.channelTitle!,
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  dataCenter.singleVideoToDownload!
+                                          .existedOnStorage
+                                      ? const Text(
+                                          'downloaded',
+                                          style: TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.green),
+                                        )
+                                      : const Text(
+                                          'not downloaded',
+                                          style: TextStyle(
+                                              fontSize: 14, color: Colors.red),
+                                        ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ]),
+                ),
+                ...dataCenter.playlists.map(
+                  (e) {
+                    return Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            height: 80,
+                            width: 100,
+                            child: Image.file(
+                              File(e.image),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              e.name,
+                              maxLines: 1,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium!
+                                  .copyWith(overflow: TextOverflow.ellipsis),
+                            ),
+                          ),
+                          FutureBuilder(
+                              future: VideoDataBase.instance.hasVideo(e.id,
+                                  dataCenter.singleVideoToDownload!.videoid),
+                              builder: (context, snapshot) {
+                                if (snapshot.hasData) {
+                                  if (snapshot.data == true) {
+                                    inAnyPLaylist = true;
+                                  }
+                                  return Checkbox(
+                                    value: snapshot.data == true
+                                        ? snapshot.data
+                                        : selectedplaylist == e.id,
+                                    onChanged: (value) {
+                                      if (selectedplaylist == e.id!) {
+                                        setState(() {
+                                          selectedplaylist = -1;
+                                        });
+                                        return;
+                                      }
+                                      setState(() {
+                                        selectedplaylist = e.id!;
+                                      });
+                                    },
+                                  );
+                                }
+                                return const CircularProgressIndicator();
+                              })
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      child: Text(
+                        'Cancel',
+                        style:
+                            Theme.of(context).textTheme.titleMedium!.copyWith(
+                                  color: Colors.red,
+                                ),
+                      ),
+                      onPressed: () async {
+                        await VideoDataBase.instance
+                            .deleteVideo(dataCenter.singleVideoToDownload!.id);
+
+                        dataCenter.initDownloadVideos();
+                        widget.panelController.close();
+                      },
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TextButton(
+                        child: Text(
+                          'Submit',
+                          style:
+                              Theme.of(context).textTheme.titleMedium!.copyWith(
+                                    color: Colors.green,
+                                  ),
+                        ),
+                        onPressed: () async {
+                          if (selectedplaylist == -1) {
+                            widget.panelController.close();
+                            return;
+                          }
+
+                          await VideoDataBase.instance
+                              .addToPLaylist(selectedplaylist, id)
+                              .then((value) {
+                            dataCenter.initDownloadVideos();
+                            widget.panelController.close();
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        );
+      }
+      return const Center(child: CircularProgressIndicator());
+    });
   }
 }

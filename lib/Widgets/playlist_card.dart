@@ -65,7 +65,7 @@ class _PlayListCardState extends State<PlayListCard> {
                         return GestureDetector(
                           onTap: () async {
                             Dio dio = Dio();
-                            await Permission.storage.request();
+
                             await dio
                                 .download(
                               playList.networkImage,

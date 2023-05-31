@@ -38,7 +38,7 @@ class _VideoPlayerState extends State<VideoPlayer> {
               }
             },
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
+              duration: const Duration(milliseconds: 200),
               curve: Curves.linear,
               height: videoController.getFrameSize(size),
               width: videoController.minimized ? 120 : size.width,

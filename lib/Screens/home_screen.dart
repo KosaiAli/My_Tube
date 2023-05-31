@@ -28,7 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   double _getMinHeight(videoController, mdeiaQuery) =>
       videoController.currentPLayListID == null
           ? 0
-          : 70 + kBottomNavigationBarHeight - mdeiaQuery.padding.top;
+          : 70 + kBottomNavigationBarHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -37,36 +37,38 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, dataCenter, child) {
         return Consumer<VideoController>(
           builder: (context, videoController, child) {
-            return Scaffold(
-              backgroundColor: const Color(0xFF212121),
-              body: WillPopScope(
-                onWillPop: () async {
-                  if (!videoController.minimized) {
-                    await videoController.minimize();
-                    return false;
-                  }
-                  return true;
-                },
-                child: SlidingUpPanel(
-                  isDraggable: false,
-                  controller: videoController.panelController,
-                  panel: videoController.currentPLayListID == null
-                      ? Container()
-                      : const PlaylistPlayerScreen(),
-                  minHeight: _getMinHeight(videoController, mdeiaQuery),
-                  maxHeight: mdeiaQuery.size.height,
-                  body: Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: kBottombarHeight,
-                    ),
-                    child: ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: dataCenter.playlists.length,
-                      itemBuilder: (context, index) {
-                        return PlayListCard(
-                          id: dataCenter.playlists[index].playlistid,
-                        );
-                      },
+            return SafeArea(
+              child: Scaffold(
+                backgroundColor: const Color(0xFF212121),
+                body: WillPopScope(
+                  onWillPop: () async {
+                    if (!videoController.minimized) {
+                      await videoController.minimize();
+                      return false;
+                    }
+                    return true;
+                  },
+                  child: SlidingUpPanel(
+                    isDraggable: false,
+                    controller: videoController.panelController,
+                    panel: videoController.currentPLayListID == null
+                        ? Container()
+                        : const PlaylistPlayerScreen(),
+                    minHeight: _getMinHeight(videoController, mdeiaQuery),
+                    maxHeight: mdeiaQuery.size.height,
+                    body: Padding(
+                      padding: const EdgeInsets.only(
+                        bottom: kBottombarHeight,
+                      ),
+                      child: ListView.builder(
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: dataCenter.playlists.length,
+                        itemBuilder: (context, index) {
+                          return PlayListCard(
+                            id: dataCenter.playlists[index].playlistid,
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),

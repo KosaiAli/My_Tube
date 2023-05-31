@@ -1,7 +1,7 @@
 enum Downloadstatus { downloading, inQueue, stopped, error }
 
 class VideoModel {
-  final int? id;
+  int? id;
 
   final String title;
   final String thumb;

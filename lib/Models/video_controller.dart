@@ -10,7 +10,7 @@ import '../Models/video_model.dart';
 import '../constant.dart';
 
 class VideoController extends ChangeNotifier {
-  final List<VideoModel> _videos = [];
+  List<VideoModel> videos = [];
   Set<String> notDownloadedVideos = {};
 
   VideoPlayerController? controller;
@@ -29,7 +29,6 @@ class VideoController extends ChangeNotifier {
 
   String? get currentPLayListID => _currentPLayListID;
   bool get minimized => _minimized;
-  List<VideoModel> get videos => _videos;
 
   Duration duration = const Duration();
   Duration position = const Duration();
@@ -47,7 +46,7 @@ class VideoController extends ChangeNotifier {
     notifyListeners();
   }
 
-  set videos(list) {
+  setvideos(list) {
     videos = list;
     notifyListeners();
   }
@@ -57,7 +56,7 @@ class VideoController extends ChangeNotifier {
 
     isPlaying = controller!.value.isPlaying;
     position = controller!.value.position;
-
+    print(controller!.value.isPlaying);
     notifyListeners();
 
     if (duration.inSeconds != 0 && position.inSeconds == duration.inSeconds) {
@@ -232,7 +231,7 @@ class VideoController extends ChangeNotifier {
       minimized = true;
       await panelController
           .animatePanelToPosition(0,
-              duration: const Duration(milliseconds: 200))
+              duration: const Duration(milliseconds: 250))
           .then(
         (value) {
           isPanelClosed = true;
@@ -246,7 +245,7 @@ class VideoController extends ChangeNotifier {
     minimized = false;
     notifyListeners();
     panelController.animatePanelToPosition(1,
-        duration: const Duration(milliseconds: 200));
+        duration: const Duration(milliseconds: 250));
   }
 
   // Future<void> showAlert() async {

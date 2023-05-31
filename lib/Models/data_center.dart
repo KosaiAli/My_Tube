@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -20,6 +21,7 @@ class DataCenter extends ChangeNotifier {
   Set<String> _videosToDownload = {};
   final List<VideoModel> videos = [];
 
+  VideoModel? singleVideoToDownload;
   late PlayList playList;
 
   bool loading = false;
@@ -87,7 +89,7 @@ class DataCenter extends ChangeNotifier {
     try {
       client = http.Client();
       var response = await client.get(uri, headers: headers);
-
+      log(response.body);
       var itemList = jsonDecode(response.body)['items'];
       var mainItem = itemList[0]['snippet'];
       playList = PlayList(
@@ -104,12 +106,13 @@ class DataCenter extends ChangeNotifier {
         await videoFile.exists().then((value) {
           playListData.add(
             VideoModel(
-                existedOnStorage: value,
-                thumb: video['snippet']['thumbnails']['high']['url'],
-                title: video['snippet']['title'],
-                videoid: video['snippet']['resourceId']['videoId'],
-                channelTitle: video['snippet']['videoOwnerChannelTitle'],
-                playlistId: video['snippet']['playlistId']),
+              existedOnStorage: value,
+              thumb: video['snippet']['thumbnails']['high']['url'],
+              title: video['snippet']['title'],
+              videoid: video['snippet']['resourceId']['videoId'],
+              channelTitle: video['snippet']['videoOwnerChannelTitle'],
+              playlistId: video['snippet']['playlistId'],
+            ),
           );
         });
       }
@@ -120,6 +123,54 @@ class DataCenter extends ChangeNotifier {
     loading = false;
     initDownloadVideos();
     notifyListeners();
+  }
+
+  Future<int> prepareDownloadSingle(String videoId) async {
+    if (loading) {
+      return -1;
+    }
+
+    loading = true;
+    singleVideoToDownload = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    Map<String, String> paramters = {
+      'part': 'snippet,contentDetails',
+      'key': apiKey,
+      'id': videoId,
+    };
+
+    String baseUrl = 'youtube.googleapis.com';
+
+    Uri uri = Uri.https(
+      baseUrl,
+      '/youtube/v3/videos',
+      paramters,
+    );
+
+    Map<String, String> headers = {
+      HttpHeaders.contentTypeHeader: 'application/json'
+    };
+    client = http.Client();
+    var response = await client.get(uri, headers: headers);
+    var details = jsonDecode(response.body)['items'][0];
+    File videoFile = File('$kFolderUrlBase/${details['snippet']['title']}.mp4');
+    await videoFile.exists().then((value) {
+      singleVideoToDownload = VideoModel(
+        existedOnStorage: value,
+        thumb: details['snippet']['thumbnails']['medium']['url'],
+        title: details['snippet']['title'],
+        videoid: details['id'],
+        channelTitle: details['snippet']['channelTitle'],
+      );
+    });
+    final id = await VideoDataBase.instance
+        .addVideoToVideos(singleVideoToDownload!.tojson());
+
+    singleVideoToDownload!.id = id;
+    WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
+    loading = false;
+    print('id ' + id.toString());
+    return id;
   }
 
   void shuffleDownloadList(id) {
@@ -137,6 +188,7 @@ class DataCenter extends ChangeNotifier {
   }
 
   void initDownloadVideos() async {
+    await Permission.storage.request();
     videos.clear();
 
     await VideoDataBase.instance.fetchVideos().then((databaseVideos) {
@@ -209,7 +261,7 @@ class DataCenter extends ChangeNotifier {
     notifyListeners();
 
     var url = Uri.parse(
-        'https://apimu.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.videoid}&type=240');
+        'https://api.akuari.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.videoid}&type=240');
     try {
       if (video.videoUrl == null) {
         var response = await client.get(
