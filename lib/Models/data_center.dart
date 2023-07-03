@@ -1,27 +1,28 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:developer';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
+import 'package:sliding_up_panel/sliding_up_panel.dart';
 
 import '../Models/playlist_model.dart';
 import '../Models/database.dart';
-import '../Models/video_model.dart';
+import 'audio_model.dart';
 import '../constant.dart';
 import '../utility.dart';
 
 class DataCenter extends ChangeNotifier {
-  List<VideoModel> playListData = [];
-  List<VideoModel> queueVideos = [];
+  List<Audio> playListData = [];
+  List<Audio> queueAudios = [];
   List<PlayList> playlists = [];
-  Set<String> _videosToDownload = {};
-  final List<VideoModel> videos = [];
+  Set<String> _audioToDownload = {};
+  final List<Audio> audios = [];
 
-  VideoModel? singleVideoToDownload;
+  Audio? singleAudioToDownload;
   late PlayList playList;
 
   bool loading = false;
@@ -31,6 +32,7 @@ class DataCenter extends ChangeNotifier {
   CancelToken cancelToken = CancelToken();
 
   ScrollController downloadScreenController = ScrollController();
+  PanelController panelController = PanelController();
 
   int _selectedPageIndex = 0;
 
@@ -45,12 +47,13 @@ class DataCenter extends ChangeNotifier {
 
   Future prepareDownloadList(String text) async {
     playListData.clear();
-    _videosToDownload.clear();
+    _audioToDownload.clear();
 
     if (loading) {
       return;
     }
 
+    panelController.open();
     loading = true;
     String playlistID;
 
@@ -89,7 +92,7 @@ class DataCenter extends ChangeNotifier {
     try {
       client = http.Client();
       var response = await client.get(uri, headers: headers);
-      log(response.body);
+
       var itemList = jsonDecode(response.body)['items'];
       var mainItem = itemList[0]['snippet'];
       playList = PlayList(
@@ -99,44 +102,44 @@ class DataCenter extends ChangeNotifier {
         networkImage: mainItem['thumbnails']['medium']['url'],
       );
 
-      for (var video in itemList) {
-        File videoFile =
-            File('$kFolderUrlBase/${video['snippet']['title']}.mp4');
+      for (var audio in itemList) {
+        final audioFile =
+            File('$kFolderUrlBase/${audio['snippet']['title']}.mp3');
 
-        await videoFile.exists().then((value) {
-          playListData.add(
-            VideoModel(
-              existedOnStorage: value,
-              thumb: video['snippet']['thumbnails']['high']['url'],
-              title: video['snippet']['title'],
-              videoid: video['snippet']['resourceId']['videoId'],
-              channelTitle: video['snippet']['videoOwnerChannelTitle'],
-              playlistId: video['snippet']['playlistId'],
-            ),
-          );
-        });
+        final exists = await audioFile.exists();
+        playListData.add(
+          Audio(
+            existedOnStorage: exists,
+            thumb: audio['snippet']['thumbnails']['high']['url'],
+            title: audio['snippet']['title'],
+            audioid: audio['snippet']['resourceId']['videoId'],
+            channelTitle: audio['snippet']['videoOwnerChannelTitle'],
+            playlistId: audio['snippet']['playlistId'],
+          ),
+        );
       }
     } catch (error) {
       loading = false;
       rethrow;
     }
     loading = false;
-    initDownloadVideos();
+    initDownloadAudios();
     notifyListeners();
   }
 
-  Future<int> prepareDownloadSingle(String videoId) async {
+  Future<int> prepareDownloadSingle(String audioId) async {
     if (loading) {
       return -1;
     }
 
+    panelController.open();
     loading = true;
-    singleVideoToDownload = null;
+    singleAudioToDownload = null;
     WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     Map<String, String> paramters = {
       'part': 'snippet,contentDetails',
       'key': apiKey,
-      'id': videoId,
+      'id': audioId,
     };
 
     String baseUrl = 'youtube.googleapis.com';
@@ -153,76 +156,76 @@ class DataCenter extends ChangeNotifier {
     client = http.Client();
     var response = await client.get(uri, headers: headers);
     var details = jsonDecode(response.body)['items'][0];
-    File videoFile = File('$kFolderUrlBase/${details['snippet']['title']}.mp4');
-    await videoFile.exists().then((value) {
-      singleVideoToDownload = VideoModel(
-        existedOnStorage: value,
-        thumb: details['snippet']['thumbnails']['medium']['url'],
-        title: details['snippet']['title'],
-        videoid: details['id'],
-        channelTitle: details['snippet']['channelTitle'],
-      );
-    });
-    final id = await VideoDataBase.instance
-        .addVideoToVideos(singleVideoToDownload!.tojson());
+    final audioFile =
+        File('$kFolderUrlBase/${details['snippet']['title']}.mp3');
+    final exists = await audioFile.exists();
+    singleAudioToDownload = Audio(
+      existedOnStorage: exists,
+      thumb: details['snippet']['thumbnails']['high']['url'],
+      title: details['snippet']['title'],
+      audioid: details['id'],
+      channelTitle: details['snippet']['channelTitle'],
+    );
 
-    singleVideoToDownload!.id = id;
+    final id =
+        await DB.instance.addAudioToAudio(singleAudioToDownload!.tojson());
+
+    singleAudioToDownload!.id = id;
     WidgetsBinding.instance.addPostFrameCallback((_) => notifyListeners());
     loading = false;
-    print('id ' + id.toString());
+
     return id;
   }
 
   void shuffleDownloadList(id) {
-    if (_videosToDownload.contains(id)) {
-      _videosToDownload.remove(id);
+    if (_audioToDownload.contains(id)) {
+      _audioToDownload.remove(id);
       notifyListeners();
       return;
     }
-    _videosToDownload.add(id);
+    _audioToDownload.add(id);
     notifyListeners();
   }
 
-  List<String> get videosToDownload {
-    return [..._videosToDownload];
+  List<String> get audioToDownload {
+    return [..._audioToDownload];
   }
 
-  void initDownloadVideos() async {
+  void initDownloadAudios() async {
     await Permission.storage.request();
-    videos.clear();
+    audios.clear();
 
-    await VideoDataBase.instance.fetchVideos().then((databaseVideos) {
-      for (var element in databaseVideos) {
-        File videoFile = File('$kFolderUrlBase/${element['name']}.mp4');
-        videoFile.exists().then((exists) {
-          videos.add(VideoModel.createPostResult(element, exists));
-        });
-      }
-    });
+    final databaseAudios = await DB.instance.fetchAudios();
+    for (var element in databaseAudios) {
+      File audioFile = File('$kFolderUrlBase/${element['name']}.mp3');
+      await audioFile.exists().then((exists) {
+        audios.add(Audio.createPostResult(element, exists));
+      });
+    }
 
-    await VideoDataBase.instance.fetchPlaylists().then((databasePLaylist) {
-      playlists = [];
-      for (var element in databasePLaylist) {
-        playlists.add(PlayList.creatPlaylist(element));
-      }
-    });
+    print(audios);
+
+    final databasePLaylist = await DB.instance.fetchPlaylists();
+    playlists = [];
+    for (var element in databasePLaylist) {
+      playlists.add(PlayList.creatPlaylist(element));
+    }
 
     notifyListeners();
   }
 
   Future<void> exists(name, id) async {
-    File videoFile = File('$kFolderUrlBase/$name.mp4');
+    final audioFile = File('$kFolderUrlBase/$name.mp3');
 
-    await videoFile.exists().then((value) {
-      final index = videos.indexWhere((element) => element.videoid == id);
-      videos[index].existedOnStorage = value;
-    });
+    final exists = await audioFile.exists();
+    final index = audios.indexWhere((element) => element.audioid == id);
+    audios[index].existedOnStorage = exists;
 
     notifyListeners();
   }
 
-  void addVideo(VideoModel video) {
-    videos.add(video);
+  void addAudio(Audio audio) {
+    audios.add(audio);
     notifyListeners();
   }
 
@@ -242,59 +245,59 @@ class DataCenter extends ChangeNotifier {
     return directory.path;
   }
 
-  Future downloadVideo(VideoModel video, String format, int times) async {
+  Future downloadAudio(Audio audio, String format, int times) async {
     if (times >= 4) {
-      video.videoStatus = Downloadstatus.error;
+      audio.audioStatus = Downloadstatus.error;
       notifyListeners();
-      skipItem(video.videoid);
+      skipItem(audio.audioid);
       return;
     }
-
-    if (video.existedOnStorage) {
+    if (audio.existedOnStorage) {
       return;
     }
 
     client = http.Client();
     dio = Dio();
     cancelToken = CancelToken();
-    video.videoStatus = Downloadstatus.downloading;
+    audio.audioStatus = Downloadstatus.downloading;
     notifyListeners();
 
     var url = Uri.parse(
-        'https://api.akuari.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${video.videoid}&type=240');
+        'https://api.akuari.my.id/downloader/youtube3?link=https://www.youtube.com/watch?v=${audio.audioid}&type=240');
     try {
-      if (video.videoUrl == null) {
-        var response = await client.get(
-          url,
-          headers: {
-            'Accept': '*/*',
-            'Content-Type': 'application/json',
-          },
-        ).timeout(const Duration(seconds: 15));
-        var downloadLink = jsonDecode(response.body)['mp4']['download'];
-        video.videoUrl = downloadLink;
+      double fullSize;
+      if (audio.audioUrl == null) {
+        var response =
+            await client.get(url).timeout(const Duration(seconds: 15));
+        var downloadLink = jsonDecode(response.body)['audio']['audio'];
+        String size = jsonDecode(response.body)['audio']['size'];
+        size = size.substring(0, size.length - 2);
+        fullSize = double.parse(size);
+        fullSize = fullSize * pow(1000, 2);
+        audio.size = fullSize;
+        audio.audioUrl = downloadLink;
       }
 
-      await getDownloadPath().then((value) async {
-        await dio.download(video.thumb, '$value/${video.title}.jpg');
+      final path = await getDownloadPath();
 
-        await dio.download(video.videoUrl!, '$value/${video.title}.$format',
-            onReceiveProgress: (count, total) {
-          video.downloaded = count / total;
+      await dio.download(audio.thumb, '$path/${audio.title}.jpg');
 
-          notifyListeners();
-        }, cancelToken: cancelToken);
-      });
+      await dio.download(audio.audioUrl!, '$path/${audio.title}.mp3',
+          onReceiveProgress: (count, total) {
+        audio.downloaded = count / audio.size;
 
-      exists(video.title, video.videoid);
+        notifyListeners();
+      }, cancelToken: cancelToken);
 
-      video.videoStatus = Downloadstatus.stopped;
+      exists(audio.title, audio.audioid);
+
+      audio.audioStatus = Downloadstatus.stopped;
       notifyListeners();
     } on TimeoutException catch (_) {
-      await downloadVideo(video, format, times + 1);
+      await downloadAudio(audio, format, times + 1);
     } catch (e) {
       File file = File(
-        '$kFolderUrlBase/${video.title}.mp4',
+        '$kFolderUrlBase/${audio.title}.mp3',
       );
       await file.exists().then((exists) async {
         if (exists) {
@@ -305,9 +308,9 @@ class DataCenter extends ChangeNotifier {
   }
 
   void initDownloadQueue() {
-    queueVideos = videos.where((element) {
+    queueAudios = audios.where((element) {
       if (!element.existedOnStorage) {
-        element.videoStatus = Downloadstatus.inQueue;
+        element.audioStatus = Downloadstatus.inQueue;
         return !element.existedOnStorage;
       }
 
@@ -317,8 +320,8 @@ class DataCenter extends ChangeNotifier {
 
   Future<void> downloadAll() async {
     try {
-      for (var element in queueVideos) {
-        await downloadVideo(element, 'mp4', 1);
+      for (var element in queueAudios) {
+        await downloadAudio(element, 'mp3', 1);
       }
     } catch (e) {
       return;
@@ -326,56 +329,55 @@ class DataCenter extends ChangeNotifier {
   }
 
   void downloadList() async {
-    final list = <VideoModel>[];
-    for (var element in _videosToDownload) {
-      final video =
-          playListData.singleWhere((video) => element == video.videoid);
-      video.videoStatus = Downloadstatus.inQueue;
-      list.add(video);
+    final list = <Audio>[];
+    for (var element in _audioToDownload) {
+      final audio =
+          playListData.singleWhere((audio) => element == audio.audioid);
+      audio.audioStatus = Downloadstatus.inQueue;
+      list.add(audio);
     }
-    queueVideos = list;
+    queueAudios = list;
     downloadAll();
   }
 
   void skipItem(id) {
-    var video = videos.singleWhere((element) => element.videoid == id);
+    var audio = audios.singleWhere((element) => element.audioid == id);
 
     dio.close();
     client.close();
     cancelToken.cancel();
 
-    queueVideos.removeWhere((element) => element.videoid == video.videoid);
-    if (video.videoStatus != Downloadstatus.error) {
-      video.videoStatus = Downloadstatus.stopped;
+    queueAudios.removeWhere((element) => element.audioid == audio.audioid);
+    if (audio.audioStatus != Downloadstatus.error) {
+      audio.audioStatus = Downloadstatus.stopped;
     }
     notifyListeners();
     downloadAll();
   }
 
-  Future<List<VideoModel>> fetchPlaylistVideos(String id) async {
-    final List<VideoModel> videos = [];
+  Future<List<Audio>> fetchPlaylistAudios(String id) async {
+    final List<Audio> audios = [];
 
-    await VideoDataBase.instance.fetchPlaylistVideos(id).then((value) async {
-      for (var element in value) {
-        final name = element['name'];
-        File videoFile = File('$kFolderUrlBase/$name.mp4');
+    final values = await DB.instance.fetchPlaylistAudios(id);
+    for (var element in values) {
+      final name = element['name'];
+      File audioFile = File('$kFolderUrlBase/$name.mp3');
 
-        await videoFile.exists().then((exists) {
-          videos.add(VideoModel.createPostResult(element, exists));
-        });
-      }
-    });
+      final exists = await audioFile.exists();
+      audios.add(Audio.createPostResult(element, exists));
+    }
 
-    return videos;
+    return audios;
   }
 
-  void scrollToVideoIndex(videosNotDownloaded) {
+  void scrollToAudioIndex(audiosNotDownloaded) {
     selectedPageIndex = 1;
-    _videosToDownload = videosNotDownloaded;
-    int index = videos
-        .indexWhere((element) => element.videoid == _videosToDownload.first);
 
-    downloadScreenController.animateTo(index * (kVideoCardSize + 15),
+    _audioToDownload = audiosNotDownloaded;
+    int index = audios
+        .indexWhere((element) => element.audioid == _audioToDownload.first);
+
+    downloadScreenController.animateTo(index * (kAudiooCardSize + 15),
         duration: const Duration(milliseconds: 300), curve: Curves.easeInExpo);
   }
 }

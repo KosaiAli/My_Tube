@@ -2,13 +2,12 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:my_youtube/Models/data_center.dart';
-import 'package:my_youtube/Models/playlist_model.dart';
-import 'package:my_youtube/Models/video_controller.dart';
+import 'package:my_youtube/size_confg.dart';
 import 'package:provider/provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
-import '../Screens/edit_playlist_screen.dart';
+import '../Models/player_controller.dart';
+import '../Models/data_center.dart';
+import '../Models/playlist_model.dart';
 import '../constant.dart';
 
 class PlayListCard extends StatefulWidget {
@@ -39,93 +38,75 @@ class _PlayListCardState extends State<PlayListCard> {
 
       image = File(playList.image);
       return GestureDetector(
-        onTap: () {
-          Provider.of<VideoController>(context, listen: false)
-              .initializePlaylist(playList.playlistid,
-                  Provider.of<DataCenter>(context, listen: false));
+        onTap: () async {
+          final musicPlayer = Provider.of<MusicPlayer>(context, listen: false);
+          await musicPlayer.loadPlaylist(playList.playlistid).then((value) {
+            musicPlayer.currentPlaylist = playList;
+          });
+          // await Future.delayed(const Duration(seconds: 2));
+          musicPlayer.play();
         },
-        child: Container(
-          color: Colors.grey[900],
-          margin: const EdgeInsets.only(bottom: 3),
+        child: SizedBox(
+          height: getProportionateScreenHeight(160),
+          width: getProportionateScreenWidth(125),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Stack(
-                children: [
-                  SizedBox(
-                    height: 310,
-                    child: FutureBuilder<bool>(
-                      future: image.exists(),
-                      builder: (context, snaphot) {
-                        if (snaphot.data != null && snaphot.data == true) {
-                          // print(value);
-                          return Image.file(image);
-                        }
+              FutureBuilder<bool>(
+                future: image.exists(),
+                builder: (context, snaphot) {
+                  if (snaphot.data == null) {
+                    return SizedBox(
+                      height: getProportionateScreenHeight(110),
+                      width: getProportionateScreenWidth(110),
+                    );
+                  }
 
-                        return GestureDetector(
-                          onTap: () async {
-                            Dio dio = Dio();
+                  if (snaphot.data != null && snaphot.data == true) {
+                    return Container(
+                        height: getProportionateScreenHeight(110),
+                        width: getProportionateScreenWidth(110),
+                        decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(5)),
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.file(
+                          image,
+                          fit: BoxFit.cover,
+                        ));
+                  }
 
-                            await dio
-                                .download(
-                              playList.networkImage,
-                              '$kFolderUrlBase/${playList.name.substring(0, playList.name.length - 4)}.jpg',
-                              onReceiveProgress: (count, total) {},
-                            )
-                                .then((value) {
-                              setState(() {});
-                            });
-                          },
-                          child: const Center(
-                            child: Icon(Icons.download_outlined),
-                          ),
-                        );
-                      },
+                  return GestureDetector(
+                    onTap: () async {
+                      Dio dio = Dio();
+
+                      await dio
+                          .download(
+                        playList.networkImage,
+                        '$kFolderUrlBase/${playList.name.substring(0, playList.name.length - 4)}.jpg',
+                        onReceiveProgress: (count, total) {},
+                      )
+                          .then((value) {
+                        setState(() {});
+                      });
+                    },
+                    child: const Center(
+                      child: Icon(Icons.download_outlined),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      width: double.infinity,
-                      color: Colors.white.withAlpha(60).withOpacity(0.5),
-                      child: const Icon(
-                        Icons.playlist_play_rounded,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    ),
-                  )
-                ],
+                  );
+                },
               ),
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                padding: const EdgeInsets.all(5),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
                       child: Text(
                         playList.name,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.01,
-                          wordSpacing: 0.01,
-                          color: Colors.white,
-                        ),
-                        maxLines: 1,
+                        style: Theme.of(context).textTheme.labelMedium,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).pushNamed(
-                            PlayListEditScreen.routeName,
-                            arguments: playList.playlistid);
-                      },
-                      child: const Icon(Icons.edit_rounded),
-                    )
                   ],
                 ),
               ),

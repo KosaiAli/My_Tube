@@ -1,21 +1,19 @@
-import 'dart:developer';
-
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'data_center.dart';
+import './data_center.dart';
 
-class VideoDataBase {
-  static final VideoDataBase instance = VideoDataBase._init();
+class DB {
+  static final DB instance = DB._init();
 
   static Database? _database;
 
-  VideoDataBase._init();
+  DB._init();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
 
-    _database = await _initDB('videos.db');
+    _database = await _initDB('audios.db');
     return _database!;
   }
 
@@ -38,17 +36,17 @@ CREATE TABLE PlayLists (
 ''');
 
     await db.execute('''
-CREATE TABLE Video (
+CREATE TABLE Audio (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  videoid TEXT NOT NULL UNIQUE,
+  audioid TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   image TEXT NOT NULL,
   channelTitle TEXT NOT NULL
 )
 ''');
     await db.execute('''
-  CREATE TABLE playlistvideos (
-  videoid INTEGER NOT NULL,
+  CREATE TABLE playlistaudios (
+  audioid INTEGER NOT NULL,
   playlistid INTEGER NOT NULL
 )
 ''');
@@ -69,45 +67,45 @@ CREATE TABLE Video (
       id = playList.first['id'] as int;
     }
 
-    final videos = dataInstance.videosToDownload;
+    final audios = dataInstance.audioToDownload;
 
-    final downloadedVideos =
-        await fetchPlaylistVideos(playlistData['playlistid']);
+    final downloadedAudios =
+        await fetchPlaylistAudios(playlistData['playlistid']);
 
-    videos.removeWhere((videoId) {
-      return downloadedVideos
-          .any((downloadedVideo) => downloadedVideo['videoid'] == videoId);
+    audios.removeWhere((audioId) {
+      return downloadedAudios
+          .any((downloadedAudio) => downloadedAudio['audioid'] == audioId);
     });
 
-    for (var videoId in videos) {
-      final videoInstance = dataInstance.playListData
-          .firstWhere((element) => element.videoid == videoId);
+    for (var audioId in audios) {
+      final audioInstance = dataInstance.playListData
+          .firstWhere((element) => element.audioid == audioId);
 
-      int? videoid;
+      int? audioid;
 
       await db
           .rawQuery(
-              'SELECT id FROM Video WHERE videoid LIKE "%${videoInstance.videoid}%"')
+              'SELECT id FROM Audio WHERE audioid LIKE "%${audioInstance.audioid}%"')
           .then(
-        (video) async {
-          if (video.isNotEmpty) {
-            videoid = video.first['id'] as int;
+        (audio) async {
+          if (audio.isNotEmpty) {
+            audioid = audio.first['id'] as int;
             return;
           }
-          Map<String, String> videoData = videoInstance.tojson();
-          videoid = await db.insert('Video', videoData);
+          Map<String, String> audioData = audioInstance.tojson();
+          audioid = await db.insert('Audio', audioData);
         },
       );
 
-      await db.insert('playlistvideos', {'videoid': videoid, 'playlistid': id});
+      await db.insert('playlistaudios', {'audioid': audioid, 'playlistid': id});
     }
-    dataInstance.initDownloadVideos();
+    dataInstance.initDownloadAudios();
   }
 
-  Future<List<Map<String, Object?>>> fetchVideos() async {
+  Future<List<Map<String, Object?>>> fetchAudios() async {
     final db = await instance.database;
 
-    return await db.rawQuery('SELECT * FROM Video');
+    return await db.rawQuery('SELECT * FROM Audio');
   }
 
   Future<List<Map<String, Object?>>> fetchPlaylists() async {
@@ -116,35 +114,35 @@ CREATE TABLE Video (
     return await db.rawQuery('SELECT * FROM PlayLists');
   }
 
-  Future<List<Map<String, Object?>>> fetchPlaylistVideos(playListID) async {
+  Future<List<Map<String, Object?>>> fetchPlaylistAudios(playListID) async {
     final db = await instance.database;
     final id = await db.rawQuery(
         'SELECT id FROM PlayLists WHERE playlistid LIKE "%$playListID%"');
 
     return await db.rawQuery(
-        'SELECT * FROM Video WHERE id in (SELECT videoid FROM playlistvideos WHERE playlistid = ${id.first['id']})');
+        'SELECT * FROM Audio WHERE id in (SELECT audioid FROM playlistaudios WHERE playlistid = ${id.first['id']})');
   }
 
-  Future removeVideoFromPlaylist(playlistID, videoID) async {
+  Future removeAudioFromPlaylist(playlistID, audioID) async {
     final db = await instance.database;
 
-    await db.delete('playlistvideos',
-        where: 'videoid LIKE "%$videoID%" AND playlistid LIKE "%$playlistID%"');
+    await db.delete('playlistaudios',
+        where: 'audioid LIKE "%$audioID%" AND playlistid LIKE "%$playlistID%"');
   }
 
-  Future addToPLaylist(playlistID, videoID) async {
+  Future addToPLaylist(playlistID, audioID) async {
     final db = await instance.database;
 
     await db.insert(
-        'playlistvideos', {'videoid': videoID, 'playlistid': playlistID});
+        'playlistaudios', {'audioid': audioID, 'playlistid': playlistID});
   }
 
   deleteAll() async {
     final db = await instance.database;
 
     await db.delete('PlayLists');
-    await db.delete('Video');
-    await db.delete('playlistvideos');
+    await db.delete('Audio');
+    await db.delete('playlistaudios');
   }
 
   Future updatePlaylist(map) async {
@@ -154,37 +152,37 @@ CREATE TABLE Video (
         where: 'playlistid LIKE "%${map['playlistid']}%"');
   }
 
-  Future<bool> hasVideo(playlistID, videoID) async {
+  Future<bool> hasaudio(playlistID, audioID) async {
     final db = await instance.database;
 
     final id = await db
-        .rawQuery('SELECT id FROM Video WHERE videoid LIKE "%$videoID%"');
+        .rawQuery('SELECT id FROM Audio WHERE audioid LIKE "%$audioID%"');
     if (id.isEmpty) {
       return false;
     }
     final exists = await db.rawQuery(
-        'SELECT * FROM playlistvideos WHERE playlistid LIKE "%$playlistID%" AND videoid LIKE "%${id.first['id']}%"');
+        'SELECT * FROM playlistaudios WHERE playlistid LIKE "%$playlistID%" AND audioid LIKE "%${id.first['id']}%"');
 
     return exists.isNotEmpty;
     // await db.rawQuery()
   }
 
-  Future<int> addVideoToVideos(data) async {
+  Future<int> addAudioToAudio(data) async {
     final db = await instance.database;
     int id;
-    final video = await db.rawQuery(
-        'SELECT id FROM Video WHERE videoid LIKE "%${data['videoid']}%"');
-    if (video.isNotEmpty) {
-      id = video.first['id'] as int;
+    final audio = await db.rawQuery(
+        'SELECT id FROM Audio WHERE audioid LIKE "%${data['audioid']}%"');
+    if (audio.isNotEmpty) {
+      id = audio.first['id'] as int;
     } else {
-      id = await db.insert('Video', data);
+      id = await db.insert('Audio', data);
     }
     return id;
   }
 
-  Future deleteVideo(id) async {
+  Future deleteAudio(id) async {
     final db = await instance.database;
 
-    await db.delete('Video', where: 'id LIKE "%$id%"');
+    await db.delete('Audio', where: 'id LIKE "%$id%"');
   }
 }

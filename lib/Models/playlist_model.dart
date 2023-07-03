@@ -24,10 +24,11 @@ class PlayList {
 
   factory PlayList.creatPlaylist(Map object) {
     return PlayList(
-        playlistid: object['playlistid'],
-        name: object['name'],
-        image: object['image'],
-        id: object['id'],
-        networkImage: object['networkImage']);
+      playlistid: object['playlistid'],
+      name: object['name'],
+      image: object['image'],
+      id: object['id'],
+      networkImage: object['networkImage'],
+    );
   }
 }

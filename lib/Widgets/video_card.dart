@@ -1,31 +1,27 @@
 import 'dart:io';
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../Models/data_center.dart';
-import '../Models/video_model.dart';
+import '../Models/audio_model.dart';
 import '../constant.dart';
 
-class VideoCard extends StatefulWidget {
-  const VideoCard({super.key, required this.id, required this.icon});
+class AudioCard extends StatefulWidget {
+  const AudioCard({super.key, required this.id, required this.icon});
   final String id;
   final Widget icon;
   @override
-  State<VideoCard> createState() => _VideoCardState();
+  State<AudioCard> createState() => _AudioCardState();
 }
 
-class _VideoCardState extends State<VideoCard> {
-  late VideoModel video;
-  late File image;
+class _AudioCardState extends State<AudioCard> {
+  late Audio audio;
+
   @override
   void initState() {
-    video = Provider.of<DataCenter>(context, listen: false)
-        .videos
-        .firstWhere((element) => element.videoid == widget.id);
-
-    image = File('$kFolderUrlBase/${video.title}.jpg');
+    audio = Provider.of<DataCenter>(context, listen: false)
+        .audios
+        .firstWhere((element) => element.audioid == widget.id);
 
     super.initState();
   }
@@ -39,68 +35,34 @@ class _VideoCardState extends State<VideoCard> {
   Widget build(BuildContext context) {
     return Consumer<DataCenter>(builder: (context, dataCenter, child) {
       return SizedBox(
-        height: kVideoCardSize,
+        height: kAudiooCardSize,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: kVideoCardSize,
-              height: kVideoCardSize,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: video.existedOnStorage
-                    ? FutureBuilder<bool>(
-                        future: image.exists(),
-                        builder: (context, snaphot) {
-                          if (snaphot.data != null && snaphot.data == true) {
-                            // print(value);
-                            return Image.file(image);
-                          }
-
-                          return GestureDetector(
-                              onTap: () async {
-                                Dio dio = Dio();
-                                await dio
-                                    .download(
-                                  video.thumb,
-                                  '$kFolderUrlBase/${video.title}.jpg',
-                                  onReceiveProgress: (count, total) {},
-                                )
-                                    .then((value) {
-                                  setState(() {});
-                                });
-                              },
-                              child: const Icon(Icons.download_outlined));
-                        },
-                      )
-                    : Image.network(
-                        video.thumb,
-                      ),
-              ),
-            ),
+            SongImage(audio: audio),
             const SizedBox(width: 20),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(video.title,
+                  Text(audio.title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodyMedium),
                   const SizedBox(height: 5),
-                  Text(video.channelTitle!,
+                  Text(audio.channelTitle!,
                       style: Theme.of(context).textTheme.bodySmall),
-                  if (video.videoStatus == Downloadstatus.downloading)
+                  if (audio.audioStatus == Downloadstatus.downloading)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: LinearProgressIndicator(
-                        value: video.downloaded,
+                        value: audio.downloaded,
                       ),
                     ),
-                  if (video.videoStatus == Downloadstatus.error)
+                  if (audio.audioStatus == Downloadstatus.error)
                     const Text(
-                      'something got wrong',
+                      'something went wrong',
                       style: TextStyle(color: Colors.red),
                     )
                 ],
@@ -111,5 +73,43 @@ class _VideoCardState extends State<VideoCard> {
         ),
       );
     });
+  }
+}
+
+class SongImage extends StatefulWidget {
+  const SongImage({super.key, required this.audio});
+  final Audio audio;
+  @override
+  State<SongImage> createState() => _SongImageState();
+}
+
+class _SongImageState extends State<SongImage> {
+  late File image;
+  late bool exists;
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<void> checkExists() async {
+    exists = await image.exists();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    image = File('$kFolderUrlBase/${widget.audio.title}.jpg');
+
+    return SizedBox(
+      width: kAudiooCardSize,
+      height: kAudiooCardSize,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: widget.audio.existedOnStorage
+            ? Image.file(image, fit: BoxFit.cover)
+            : Image.network(
+                widget.audio.thumb,
+              ),
+      ),
+    );
   }
 }
